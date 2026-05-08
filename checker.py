@@ -221,14 +221,21 @@ class SalleChecker:
                     return self._google_client, None
                 except Exception as e:
                     # Essayer avec un fichier secret si les variables échouent
-                    try:
-                        secret_path = "/etc/secrets/google-credentials.json"
+                    import os
+                    possible_paths = [
+                        "/etc/secrets/google-credentials.json",
+                        "/mnt/secrets/google-credentials.json",
+                        "/secrets/google-credentials.json",
+                        "google-credentials.json",
+                    ]
+                    for secret_path in possible_paths:
                         if os.path.exists(secret_path):
-                            creds = Credentials.from_service_account_file(secret_path, scopes=scopes)
-                            self._google_client = gspread.authorize(creds)
-                            return self._google_client, None
-                    except:
-                        pass
+                            try:
+                                creds = Credentials.from_service_account_file(secret_path, scopes=scopes)
+                                self._google_client = gspread.authorize(creds)
+                                return self._google_client, None
+                            except Exception as file_error:
+                                return None, f"Erreur fichier secret {secret_path}: {str(file_error)}"
                     return None, f"Erreur variables d'environnement: {str(e)}"
 
             # Sinon, chercher le fichier credentials.json local
