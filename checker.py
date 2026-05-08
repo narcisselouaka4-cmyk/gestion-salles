@@ -203,7 +203,9 @@ class SalleChecker:
             if os.environ.get("GOOGLE_CREDENTIALS_TYPE"):
                 try:
                     private_key = os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY", "")
-                    private_key = private_key.replace("\\n", "\n")
+                    # Gérer plusieurs formats possibles de la clé
+                    if "\\n" in private_key:
+                        private_key = private_key.replace("\\n", "\n")
                     creds_info = {
                         "type": os.environ.get("GOOGLE_CREDENTIALS_TYPE"),
                         "project_id": os.environ.get("GOOGLE_CREDENTIALS_PROJECT_ID"),
@@ -218,6 +220,15 @@ class SalleChecker:
                     self._google_client = gspread.authorize(creds)
                     return self._google_client, None
                 except Exception as e:
+                    # Essayer avec un fichier secret si les variables échouent
+                    try:
+                        secret_path = "/etc/secrets/google-credentials.json"
+                        if os.path.exists(secret_path):
+                            creds = Credentials.from_service_account_file(secret_path, scopes=scopes)
+                            self._google_client = gspread.authorize(creds)
+                            return self._google_client, None
+                    except:
+                        pass
                     return None, f"Erreur variables d'environnement: {str(e)}"
 
             # Sinon, chercher le fichier credentials.json local
