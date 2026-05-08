@@ -1,0 +1,22 @@
+# Docker Compose pour Gestion des Salles
+version: '3.8'
+
+services:
+  gestion-salles:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      # Ces variables sont optionnelles - si non définies, l'app fonctionne sans Google Sheets
+      # Pour activer Google Sheets, décommentez et remplissez les valeurs :
+      # GOOGLE_SHEET_ID: "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8"
+      # GOOGLE_CREDENTIALS_TYPE: "service_account"
+      # GOOGLE_CREDENTIALS_PROJECT_ID: "gestion-salles-app"
+      # GOOGLE_CREDENTIALS_PRIVATE_KEY_ID: "..."
+      # GOOGLE_CREDENTIALS_PRIVATE_KEY: "..."
+      # GOOGLE_CREDENTIALS_CLIENT_EMAIL: "..."
+      # GOOGLE_CREDENTIALS_CLIENT_ID: "..."
+    volumes:
+      # Monter un fichier credentials.json local si disponible
+      - ./credentials.json:/app/credentials.json:ro
+    restart: unless-stopped

@@ -1,0 +1,27 @@
+# Fichiers à ne pas inclure dans l'image Docker
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.venv
+venv
+env
+ENV
+.env
+.streamlit/secrets.toml
+credentials.json
+ngrok.log
+streamlit.log
+CLAUDE.md
+DEPLOY_STREAMLIT_CLOUD.md
+README_DOCKER.md
+start_public.sh
+install.sh
