@@ -157,13 +157,13 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     salles_dir = os.path.join(script_dir, "salles")
 
-    # ID du Google Sheet
+    # ID du Google Sheet - doit être configuré via variables d'environnement ou secrets
     GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
     if not GOOGLE_SHEET_ID:
         try:
-            GOOGLE_SHEET_ID = st.secrets.get("app_config", {}).get("google_sheet_id", "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8")
+            GOOGLE_SHEET_ID = st.secrets.get("app_config", {}).get("google_sheet_id", "")
         except Exception:
-            GOOGLE_SHEET_ID = "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8"
+            GOOGLE_SHEET_ID = ""
 
     if not os.path.exists(salles_dir):
         st.error("❌ Dossier 'salles/' introuvable. Vérifiez l'installation.")

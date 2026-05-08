@@ -8,8 +8,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: GOOGLE_SHEET_ID
-        value: 1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8
+      # Configurez votre GOOGLE_SHEET_ID via le dashboard Render (Environment Variables)
       # Ces secrets doivent être configurés manuellement dans le dashboard Render
       # après le premier déploiement, dans Settings > Environment Variables :
       # GOOGLE_CREDENTIALS_TYPE=service_account

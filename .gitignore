@@ -1,6 +1,9 @@
 # Credentials et secrets
 credentials.json
 .streamlit/secrets.toml
+.env
+.env.local
+.env.production
 
 # Python
 __pycache__/
