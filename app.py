@@ -90,18 +90,50 @@ st.markdown("""
     .viewerBadge_container__1QSob,
     .viewerBadge_link__1S137,
     .styles_terminalButton__3x48j,
-    .styles_terminalButton__3x48j {
+    /* Avatars profil en bas à droite */
+    .stAvatar,
+    [data-testid="stAvatar"],
+    .st-emotion-cache-1w3pdz4,
+    .st-emotion-cache-1q0e69f,
+    div[class*="Avatar"],
+    div[class*="avatar"],
+    /* Container avatars */
+    .st-emotion-cache-12oz5gt,
+    .st-emotion-cache-14xtw9m,
+    [data-testid="stUserAvatar"],
+    [data-testid="stDeveloperAvatar"] {
         display: none !important;
         visibility: hidden !important;
+        opacity: 0 !important;
     }
     /* Masquer spécifiquement le footer "Hosted with Streamlit" */
     .st-emotion-cache-1pd56bt,
     .st-emotion-cache-164nlkn,
     .st-emotion-cache-1jicfl7,
-    div[class*="stToolbar"] {
+    div[class*="stToolbar"],
+    div[class*="badge"],
+    div[class*="Badge"] {
         display: none !important;
     }
 </style>
+
+<script>
+    // JavaScript pour masquer les avatars après chargement
+    setInterval(function() {
+        // Chercher tous les éléments qui pourraient être des avatars
+        var elements = document.querySelectorAll('[data-testid*="Avatar"], [class*="avatar"], [class*="Avatar"], .stAvatar');
+        elements.forEach(function(el) {
+            el.style.display = 'none';
+            el.style.visibility = 'hidden';
+        });
+
+        // Masquer les conteneurs d'avatars spécifiques à Streamlit Cloud
+        var containers = document.querySelectorAll('.st-emotion-cache-12oz5gt, .st-emotion-cache-14xtw9m, div[class*="stDeveloper"], div[class*="stUser"]');
+        containers.forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }, 500);
+</script>
 """, unsafe_allow_html=True)
 
 
