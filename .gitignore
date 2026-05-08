@@ -3,6 +3,7 @@ credentials.json
 .streamlit/secrets.toml
 .env
 .env.local
+.env.local
 .env.production
 
 # Python
