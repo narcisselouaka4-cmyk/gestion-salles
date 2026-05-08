@@ -311,6 +311,10 @@ class SalleChecker:
             # Vérifier si la ligne a une valeur dans au moins une colonne semaine
             has_any_week_col = any(row[col] is not None for col in WEEK_COLS if col < len(row))
 
+            # Vérifier si la ligne a un nom (colonne N = index 13)
+            # Si oui, c'est une ligne de déclaration de bloc, pas une entrée de réservation
+            has_name = len(row) > 13 and row[13] is not None and str(row[13]).strip()
+
             if has_any_week_col:
                 # Entrée régulière → ignorer in_5th_week_section
                 if week_number <= 4:
@@ -322,7 +326,8 @@ class SalleChecker:
                     day_in_cell = None
             else:
                 # Ligne sans colonne semaine → uniquement si on est dans la section 5ème semaine ET semaine 5
-                if in_5th_week_section and week_number == 5:
+                # ET que la ligne n'a pas de nom (sinon c'est juste une déclaration de bloc)
+                if in_5th_week_section and week_number == 5 and not has_name:
                     # Ces entrées s'appliquent au jour demandé (on vérifie juste l'horaire)
                     day_in_cell = day_name  # Force le match
                 else:
@@ -614,6 +619,9 @@ class SalleChecker:
             # Vérifier si la ligne a une valeur dans au moins une colonne semaine
             has_any_week_col = any(row[col] is not None for col in WEEK_COLS if col < len(row))
 
+            # Vérifier si la ligne a un nom (colonne N = index 13)
+            has_name = len(row) > 13 and row[13] is not None and str(row[13]).strip()
+
             if has_any_week_col:
                 # Entrée régulière
                 if week_number <= 4:
@@ -624,7 +632,7 @@ class SalleChecker:
                     day_in_cell = None
             else:
                 # Ligne sans colonne semaine
-                if in_5th_week_section and week_number == 5:
+                if in_5th_week_section and week_number == 5 and not has_name:
                     day_in_cell = day_name
                 else:
                     day_in_cell = None
