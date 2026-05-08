@@ -325,10 +325,10 @@ class SalleChecker:
                     # Semaine 5 → une entrée régulière ne s'applique pas à la 5ème semaine
                     day_in_cell = None
             else:
-                # Ligne sans colonne semaine → uniquement si on est dans la section 5ème semaine ET semaine 5
-                # ET que la ligne n'a pas de nom (sinon c'est juste une déclaration de bloc)
-                if in_5th_week_section and week_number == 5 and not has_name:
-                    # Ces entrées s'appliquent au jour demandé (on vérifie juste l'horaire)
+                # Ligne sans colonne semaine → section "EN PLUS DES MOIS DE 5 DIMANCHES"
+                # Cette section ne concerne que les DIMANCHES de la 5ème semaine
+                if in_5th_week_section and week_number == 5 and not has_name and day_name == "dimanche":
+                    # Ces entrées s'appliquent uniquement aux dimanches de la 5ème semaine
                     day_in_cell = day_name  # Force le match
                 else:
                     day_in_cell = None
@@ -629,10 +629,13 @@ class SalleChecker:
                     if col_idx is not None and col_idx < len(row):
                         day_in_cell = row[col_idx]
                 else:
+                    # Semaine 5 (hors dimanche) → pas d'occupation fixe
+                    # Seul le dimanche de la 5ème semaine peut avoir des occupations (via section "EN PLUS")
                     day_in_cell = None
             else:
-                # Ligne sans colonne semaine
-                if in_5th_week_section and week_number == 5 and not has_name:
+                # Ligne sans colonne semaine → section "EN PLUS DES MOIS DE 5 DIMANCHES"
+                # Cette section ne concerne que les DIMANCHES de la 5ème semaine
+                if in_5th_week_section and week_number == 5 and not has_name and day_name == "dimanche":
                     day_in_cell = day_name
                 else:
                     day_in_cell = None
