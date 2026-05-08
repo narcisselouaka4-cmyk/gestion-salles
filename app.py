@@ -70,6 +70,22 @@ st.markdown("""
         color: #777;
         font-style: italic;
     }
+    /* Masquer le menu du profil et le footer Streamlit */
+    [data-testid="stAppDeployButton"],
+    .stAppDeployButton,
+    #MainMenu {
+        display: none !important;
+    }
+    [data-testid="stBottom"],
+    [data-testid="stFooter"],
+    footer {
+        display: none !important;
+    }
+    /* Alternative pour le footer dans les anciennes versions */
+    .st-emotion-cache-15ec6l0,
+    .st-emotion-cache-q1c1yq {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
