@@ -173,12 +173,15 @@ class SalleChecker:
         self._salles_cache = {}
 
     def _get_google_client(self):
-        """Initialise et retourne le client Google Sheets."""
+        """
+        Initialise et retourne le client Google Sheets.
+        Retourne (client, error) où error est None si succès, ou un message d'erreur string.
+        """
         if not GSPREAD_AVAILABLE:
-            return None
+            return None, "Module gspread non installé"
 
         if self._google_client is not None:
-            return self._google_client
+            return self._google_client, None
 
         try:
             scopes = ['https://www.googleapis.com/auth/spreadsheets']
@@ -190,9 +193,9 @@ class SalleChecker:
                     creds_info = dict(st.secrets["google_credentials"])
                     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
                     self._google_client = gspread.authorize(creds)
-                    return self._google_client
-            except Exception:
-                pass  # Pas sur Streamlit ou pas de secrets
+                    return self._google_client, None
+            except Exception as e:
+                return None, f"Erreur Streamlit secrets: {str(e)}"
 
             # Sinon, chercher le fichier credentials.json local
             credentials_paths = [
@@ -210,14 +213,12 @@ class SalleChecker:
             if creds_path:
                 creds = Credentials.from_service_account_file(creds_path, scopes=scopes)
                 self._google_client = gspread.authorize(creds)
-                return self._google_client
+                return self._google_client, None
 
-            print("Aucune méthode d'authentification Google trouvée")
-            return None
+            return None, "Aucune méthode d'authentification Google trouvée (ni secrets ni credentials.json)"
 
         except Exception as e:
-            print(f"Erreur connexion Google Sheets: {e}")
-            return None
+            return None, f"Erreur connexion Google Sheets: {str(e)}"
 
     def _load_salle_data(self, salle_name: str):
         """Charge les données d'un fichier de salle avec mise en cache."""
@@ -402,19 +403,22 @@ class SalleChecker:
             # Pas parseable → afficher tel quel
             return None, None, horaire_str, False
 
-    def check_reservations_google(self, salle_name: str, d: date, time_requested: time) -> list:
+    def check_reservations_google(self, salle_name: str, d: date, time_requested: time) -> tuple:
         """
         Vérifie les réservations depuis Google Sheets.
+        Retourne (results, error) où error est None si succès.
         """
         results = []
 
         if not self.google_sheet_id or not GSPREAD_AVAILABLE:
-            return results
+            return results, None
 
         try:
-            client = self._get_google_client()
+            client, error = self._get_google_client()
+            if error:
+                return results, error
             if not client:
-                return results
+                return results, "Client Google Sheets non initialisé"
 
             # Ouvrir le spreadsheet et la feuille "Planning quotidien"
             spreadsheet = client.open_by_key(self.google_sheet_id)
@@ -475,9 +479,9 @@ class SalleChecker:
                     })
 
         except Exception as e:
-            print(f"Erreur lecture Google Sheets: {e}")
+            return results, f"Erreur lecture Google Sheets: {str(e)}"
 
-        return results
+        return results, None
 
     def _parse_date_from_sheet(self, date_cell):
         """Parse une date depuis Google Sheets (qui renvoie des chaînes)."""
@@ -511,10 +515,10 @@ class SalleChecker:
 
         return dates
 
-    def check_reservations(self, salle_name: str, d: date, time_requested: time) -> list:
+    def check_reservations(self, salle_name: str, d: date, time_requested: time) -> tuple:
         """
         Vérifie les réservations extérieures pour une salle/date/heure.
-        Retourne une liste d'occupations.
+        Retourne (occupations, error) où error est None si succès.
         """
         # Si un Google Sheet est configuré, l'utiliser en priorité
         if self.google_sheet_id:
@@ -582,9 +586,9 @@ class SalleChecker:
                     })
 
         except Exception as e:
-            print(f"Erreur lecture réservations: {e}")
+            return results, f"Erreur lecture réservations: {str(e)}"
 
-        return results
+        return results, None
 
     def get_all_fixed_occupations(self, salle_name: str, d: date) -> list:
         """
@@ -680,19 +684,22 @@ class SalleChecker:
 
         return results
 
-    def get_all_reservations_google(self, salle_name: str, d: date) -> list:
+    def get_all_reservations_google(self, salle_name: str, d: date) -> tuple:
         """
         Récupère TOUTES les réservations ponctuelles depuis Google Sheets.
+        Retourne (results, error) où error est None si succès.
         """
         results = []
 
         if not self.google_sheet_id or not GSPREAD_AVAILABLE:
-            return results
+            return results, None
 
         try:
-            client = self._get_google_client()
+            client, error = self._get_google_client()
+            if error:
+                return results, error
             if not client:
-                return results
+                return results, "Client Google Sheets non initialisé"
 
             spreadsheet = client.open_by_key(self.google_sheet_id)
             try:
@@ -746,13 +753,14 @@ class SalleChecker:
                     })
 
         except Exception as e:
-            print(f"Erreur lecture Google Sheets (get_all): {e}")
+            return results, f"Erreur lecture Google Sheets (get_all): {str(e)}"
 
-        return results
+        return results, None
 
-    def get_all_reservations(self, salle_name: str, d: date) -> list:
+    def get_all_reservations(self, salle_name: str, d: date) -> tuple:
         """
         Récupère TOUTES les réservations ponctuelles d'une journée (sans filtrer par heure).
+        Retourne (results, error) où error est None si succès.
         """
         # Utiliser Google Sheets si configuré
         if self.google_sheet_id:
@@ -815,54 +823,54 @@ class SalleChecker:
                     })
 
         except Exception as e:
-            print(f"Erreur lecture réservations: {e}")
+            return results, f"Erreur lecture réservations: {str(e)}"
 
-        return results
+        return results, None
 
     def get_all_occupations(self, salle_name: str, d: date) -> dict:
         """
         Récupère TOUTES les occupations d'une journée (mode sans heure précise).
+        Retourne un dict avec 'error' si la connexion Google Sheets a échoué.
         """
         fixed_occupations = self.get_all_fixed_occupations(salle_name, d)
-        reservations = self.get_all_reservations(salle_name, d)
+        reservations, error = self.get_all_reservations(salle_name, d)
         all_occupations = fixed_occupations + reservations
 
         # Trier par heure de début
         all_occupations.sort(key=lambda x: x["debut"])
 
-        return {
+        result = {
             "salle": salle_name,
             "date": d,
             "occupations": all_occupations
         }
+        if error:
+            result["error"] = error
+        return result
 
     def check_availability(self, salle_name: str, d: date, time_requested: time) -> dict:
         """
         Vérifie complètement la disponibilité d'une salle.
         Retourne un dict avec le statut et les détails.
+        Ajoute 'error' si la connexion Google Sheets a échoué.
         """
         # Vérifier le planning fixe
         fixed_occupations = self.check_fixed_schedule(salle_name, d, time_requested)
 
         # Vérifier les réservations ponctuelles
-        reservations = self.check_reservations(salle_name, d, time_requested)
+        reservations, error = self.check_reservations(salle_name, d, time_requested)
 
         # Combiner toutes les occupations
         all_occupations = fixed_occupations + reservations
 
         # Déterminer le statut
-        if all_occupations:
-            return {
-                "libre": False,
-                "salle": salle_name,
-                "date": d,
-                "heure": time_requested,
-                "occupations": all_occupations
-            }
-        else:
-            return {
-                "libre": True,
-                "salle": salle_name,
-                "date": d,
-                "heure": time_requested
-            }
+        result = {
+            "libre": not all_occupations,
+            "salle": salle_name,
+            "date": d,
+            "heure": time_requested,
+            "occupations": all_occupations
+        }
+        if error:
+            result["error"] = error
+        return result

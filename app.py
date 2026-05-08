@@ -219,6 +219,10 @@ def main():
                     result = checker.get_all_occupations(salle.lower(), date_input)
                     occupations = result["occupations"]
 
+                    # Afficher un avertissement si Google Sheets est inaccessible
+                    if "error" in result:
+                        st.warning(f"⚠️ Connexion Google Sheets impossible : {result['error']}. Les réservations ponctuelles ne sont pas affichées.")
+
                     if not occupations:
                         st.markdown(f'''
                         <div class="result-libre">
@@ -266,6 +270,10 @@ def main():
                 else:
                     # Mode : vérifier à une heure précise
                     result = checker.check_availability(salle.lower(), date_input, heure)
+
+                    # Afficher un avertissement si Google Sheets est inaccessible
+                    if "error" in result:
+                        st.warning(f"⚠️ Connexion Google Sheets impossible : {result['error']}. Les réservations ponctuelles ne sont pas affichées.")
 
                     if result["libre"]:
                         st.markdown(f'''
