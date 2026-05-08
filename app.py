@@ -6,6 +6,10 @@ Application Streamlit pour la vérification de disponibilité des salles.
 import streamlit as st
 from datetime import datetime, time
 import os
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement locales
+load_dotenv()
 
 from checker import SalleChecker
 
