@@ -56,3 +56,6 @@ claude
 code
 conv
 conv_claude_code
+
+# Dossier de backup local (ne pas commiter)
+SECRETS_BACKUP/
