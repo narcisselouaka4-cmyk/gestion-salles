@@ -18,125 +18,190 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Design moderne et élégant
+# Design moderne inspiré sites IT/Technology professionnels
 st.markdown("""
 <style>
-    /* Fond doux */
+    /* Fond clair professionnel */
     .stApp {
-        background: linear-gradient(180deg, #fafaf9 0%, #f5f5f4 100%);
+        background: #ffffff;
     }
 
-    /* Header */
+    /* Header avec dégradé */
     .main-header {
         text-align: center;
-        font-size: 2.2rem;
-        font-weight: 700;
-        margin-bottom: 0.3rem;
-        color: #1e293b;
-        letter-spacing: -0.5px;
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .sub-header {
         text-align: center;
-        font-size: 1rem;
-        color: #64748b;
-        margin-bottom: 2rem;
+        font-size: 1.1rem;
+        color: #6b7280;
+        margin-bottom: 2.5rem;
+        font-weight: 400;
     }
 
-    /* Séparateur élégant */
-    .divider {
-        width: 80px;
-        height: 3px;
-        background: #3b82f6;
-        margin: 0 auto 2rem auto;
-        border-radius: 3px;
+    /* Section cards */
+    .section-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
     }
 
-    /* Résultat libre */
+    /* Résultat libre - style success card */
     .result-libre {
-        background: #f0fdf4;
-        border: 1px solid #86efac;
-        border-left: 4px solid #22c55e;
-        padding: 1.5rem;
-        border-radius: 12px;
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        border: 1px solid #6ee7b7;
+        border-radius: 16px;
+        padding: 2rem;
         margin: 1.5rem 0;
+        box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .result-libre::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #22c55e, #16a34a);
     }
 
     .result-libre h3 {
-        color: #166534;
-        margin: 0 0 0.5rem 0;
-        font-size: 1.3rem;
+        color: #065f46;
+        margin: 0 0 1rem 0;
+        font-size: 1.5rem;
+        font-weight: 700;
     }
 
-    /* Résultat occupé */
+    /* Résultat occupé - style error card */
     .result-occupe {
-        background: #fef2f2;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
         border: 1px solid #fca5a5;
-        border-left: 4px solid #ef4444;
-        padding: 1.5rem;
-        border-radius: 12px;
+        border-radius: 16px;
+        padding: 2rem;
         margin: 1.5rem 0;
+        box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .result-occupe::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #ef4444, #dc2626);
     }
 
     .result-occupe h3 {
-        color: #991b1b;
-        margin: 0 0 0.5rem 0;
-        font-size: 1.3rem;
+        color: #7f1d1d;
+        margin: 0 0 1rem 0;
+        font-size: 1.5rem;
+        font-weight: 700;
     }
 
-    /* Cartes d'occupation */
+    /* Cartes d'occupation - style glassmorphism */
     .occupation-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 1.25rem;
-        margin: 0.75rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
     }
 
     .occupation-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         border-color: #cbd5e1;
     }
 
-    /* Horaire */
+    /* Horaire style tag */
     .time-display {
-        font-size: 1.2rem;
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 0.95rem;
         font-weight: 600;
-        color: #0f172a;
-        margin-bottom: 0.25rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        margin-bottom: 0.75rem;
     }
 
     /* Occupant */
     .occupant-name {
-        font-size: 1rem;
-        color: #334155;
+        font-size: 1.1rem;
+        color: #1e293b;
         margin-top: 0.5rem;
+        font-weight: 600;
     }
 
     /* Activité */
     .activity-name {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         color: #64748b;
         margin-top: 0.25rem;
+        padding: 0.25rem 0;
     }
 
-    /* Bouton */
+    /* Bouton moderne */
     .stButton > button {
-        background: #3b82f6 !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important;
         border: none !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 1.5rem !important;
-        font-weight: 500 !important;
-        transition: all 0.2s !important;
+        border-radius: 12px !important;
+        padding: 1rem 2rem !important;
+        font-weight: 600 !important;
+        font-size: 1.05rem !important;
+        box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3) !important;
+        transition: all 0.3s ease !important;
     }
 
     .stButton > button:hover {
-        background: #2563eb !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59,130,246,0.3) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4) !important;
+    }
+
+    /* Titres de section */
+    h3 {
+        color: #1e293b;
+        font-weight: 700;
+        margin: 1.5rem 0 1rem 0;
+    }
+
+    /* Labels des champs */
+    label {
+        color: #475569;
+        font-weight: 500;
+    }
+
+    /* Avertissements */
+    .stAlert {
+        border-radius: 12px !important;
+        border: none !important;
+    }
+
+    /* Divider moderne */
+    .custom-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+        margin: 2rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -158,10 +223,9 @@ def format_date_fr(d):
 
 
 def main():
-    # En-tête élégant
+    # En-tête moderne professionnel
     st.markdown('<div class="main-header">✝️ Gestion des Salles</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">CFPDC — Centre de Formation</div>', unsafe_allow_html=True)
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Système de réservation du CFPDC</div>', unsafe_allow_html=True)
 
     # Déterminer le chemin vers les fichiers de salles
     # En priorité : dossier 'salles/' à côté du script, sinon le dossier courant
