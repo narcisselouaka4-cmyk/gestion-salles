@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Application Streamlit pour la vérification de disponibilité des salles.
-Accessible depuis tous les appareils du réseau local.
 """
 
 import streamlit as st
@@ -18,239 +17,115 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Design moderne inspiré sites IT/Technology professionnels
+# CSS simple et fonctionnel
 st.markdown("""
 <style>
-    /* Mode clair (défaut) */
-    .stApp {
-        background: #ffffff;
-    }
-
-    /* Mode sombre - détection automatique */
-    @media (prefers-color-scheme: dark) {
-        .stApp {
-            background: #0f172a;
-        }
-        .main-header {
-            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            background-clip: text !important;
-        }
-        .sub-header {
-            color: #94a3b8 !important;
-        }
-        h3 {
-            color: #e2e8f0 !important;
-        }
-        label {
-            color: #cbd5e1 !important;
-        }
-        .result-libre {
-            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
-            border-color: #10b981 !important;
-        }
-        .result-libre h3 {
-            color: #6ee7b7 !important;
-        }
-        .result-occupe {
-            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%) !important;
-            border-color: #ef4444 !important;
-        }
-        .result-occupe h3 {
-            color: #fca5a5 !important;
-        }
-        .occupation-card {
-            background: rgba(30, 41, 59, 0.9) !important;
-            border-color: rgba(71, 85, 105, 0.5) !important;
-        }
-        .occupation-card:hover {
-            border-color: #818cf8 !important;
-        }
-        .occupant-name {
-            color: #e2e8f0 !important;
-        }
-        .activity-name {
-            color: #94a3b8 !important;
-        }
-    }
-
-    /* Header avec dégradé */
+    /* Style général */
     .main-header {
         text-align: center;
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 1rem 0 0.5rem 0;
+        color: #1e3a5f;
     }
 
     .sub-header {
         text-align: center;
-        font-size: 1.1rem;
-        color: #6b7280;
-        margin-bottom: 2.5rem;
-        font-weight: 400;
+        font-size: 1rem;
+        color: #64748b;
+        margin-bottom: 2rem;
     }
 
-    /* Section cards */
-    .section-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        border-radius: 16px;
-        padding: 2rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e2e8f0;
-    }
-
-    /* Résultat libre - style success card */
+    /* Résultats */
     .result-libre {
-        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-        border: 1px solid #6ee7b7;
-        border-radius: 16px;
-        padding: 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.2);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .result-libre::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #22c55e, #16a34a);
+        background-color: #dcfce7;
+        border: 2px solid #22c55e;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
     }
 
     .result-libre h3 {
-        color: #065f46;
-        margin: 0 0 1rem 0;
-        font-size: 1.5rem;
-        font-weight: 700;
+        color: #15803d;
+        margin: 0 0 0.5rem 0;
     }
 
-    /* Résultat occupé - style error card */
     .result-occupe {
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-        border: 1px solid #fca5a5;
-        border-radius: 16px;
-        padding: 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.2);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .result-occupe::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #ef4444, #dc2626);
+        background-color: #fee2e2;
+        border: 2px solid #ef4444;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
     }
 
     .result-occupe h3 {
-        color: #7f1d1d;
-        margin: 0 0 1rem 0;
-        font-size: 1.5rem;
-        font-weight: 700;
+        color: #b91c1c;
+        margin: 0 0 0.5rem 0;
     }
 
-    /* Cartes d'occupation - style glassmorphism */
+    /* Cartes d'occupation */
     .occupation-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(226, 232, 240, 0.8);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        transition: all 0.3s ease;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.75rem 0;
     }
 
-    .occupation-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        border-color: #cbd5e1;
-    }
-
-    /* Horaire style tag */
     .time-display {
-        display: inline-block;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        font-size: 0.95rem;
-        font-weight: 600;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        margin-bottom: 0.75rem;
-    }
-
-    /* Occupant */
-    .occupant-name {
         font-size: 1.1rem;
-        color: #1e293b;
-        margin-top: 0.5rem;
         font-weight: 600;
+        color: #1e3a5f;
+        margin-bottom: 0.5rem;
     }
 
-    /* Activité */
+    .occupant-name {
+        font-size: 1rem;
+        color: #374151;
+        margin-top: 0.5rem;
+    }
+
     .activity-name {
-        font-size: 0.95rem;
-        color: #64748b;
-        margin-top: 0.25rem;
-        padding: 0.25rem 0;
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-style: italic;
     }
 
-    /* Bouton moderne */
-    .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 1rem 2rem !important;
-        font-weight: 600 !important;
-        font-size: 1.05rem !important;
-        box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3) !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4) !important;
-    }
-
-    /* Titres de section */
-    h3 {
-        color: #1e293b;
-        font-weight: 700;
-        margin: 1.5rem 0 1rem 0;
-    }
-
-    /* Labels des champs */
-    label {
-        color: #475569;
-        font-weight: 500;
-    }
-
-    /* Avertissements */
-    .stAlert {
-        border-radius: 12px !important;
-        border: none !important;
-    }
-
-    /* Divider moderne */
-    .custom-divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
-        margin: 2rem 0;
+    /* Mode sombre */
+    @media (prefers-color-scheme: dark) {
+        .main-header {
+            color: #60a5fa;
+        }
+        .sub-header {
+            color: #94a3b8;
+        }
+        .result-libre {
+            background-color: #064e3b;
+            border-color: #22c55e;
+        }
+        .result-libre h3 {
+            color: #4ade80;
+        }
+        .result-occupe {
+            background-color: #7f1d1d;
+            border-color: #f87171;
+        }
+        .result-occupe h3 {
+            color: #fca5a5;
+        }
+        .occupation-card {
+            background-color: #1e293b;
+            border-color: #475569;
+        }
+        .time-display {
+            color: #60a5fa;
+        }
+        .occupant-name {
+            color: #e2e8f0;
+        }
+        .activity-name {
+            color: #94a3b8;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -272,17 +147,17 @@ def format_date_fr(d):
 
 
 def main():
-    # En-tête moderne professionnel
+    # En-tête
     st.markdown('<div class="main-header">✝️ Gestion des Salles</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Système de réservation du CFPDC</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">CFPDC — Système de réservation</div>', unsafe_allow_html=True)
+
+    st.divider()
 
     # Déterminer le chemin vers les fichiers de salles
-    # En priorité : dossier 'salles/' à côté du script, sinon le dossier courant
     script_dir = os.path.dirname(os.path.abspath(__file__))
     salles_dir = os.path.join(script_dir, "salles")
 
-    # ID du Google Sheet pour les réservations
-    # Essayer de lire depuis env vars (Render) puis Streamlit secrets (Streamlit Cloud)
+    # ID du Google Sheet
     GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
     if not GOOGLE_SHEET_ID:
         try:
@@ -291,7 +166,7 @@ def main():
             GOOGLE_SHEET_ID = "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8"
 
     if not os.path.exists(salles_dir):
-        st.error(f"❌ Dossier 'salles/' introuvable. Vérifiez l'installation.")
+        st.error("❌ Dossier 'salles/' introuvable. Vérifiez l'installation.")
         return
 
     # Formulaire
@@ -312,7 +187,6 @@ def main():
             max_value=datetime(2030, 12, 31).date()
         )
 
-    # Option sans heure précise
     sans_heure = st.checkbox("🕐 Sans heure précise (voir toutes les occupations du jour)", value=False)
 
     heure = None
@@ -322,27 +196,23 @@ def main():
             value=datetime.now().time().replace(minute=0, second=0, microsecond=0)
         )
 
-    # Bouton de vérification (pleine largeur)
     st.markdown("<br>", unsafe_allow_html=True)
     verify_clicked = st.button("🔍 Vérifier la disponibilité", use_container_width=True, type="primary")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.divider()
 
     # Zone de résultat
     if verify_clicked:
         with st.spinner("Analyse en cours..."):
             try:
-                # Utiliser Google Sheets pour les réservations (temps réel)
                 checker = SalleChecker(salles_dir, GOOGLE_SHEET_ID)
 
                 if sans_heure:
-                    # Mode : voir toutes les occupations du jour
                     result = checker.get_all_occupations(salle.lower(), date_input)
                     occupations = result["occupations"]
 
-                    # Afficher un avertissement si Google Sheets est inaccessible
                     if "error" in result:
-                        st.warning(f"⚠️ Connexion Google Sheets impossible : {result['error']}. Les réservations ponctuelles ne sont pas affichées.")
+                        st.warning(f"⚠️ Connexion Google Sheets impossible. Les réservations ponctuelles ne sont pas affichées.")
 
                     if not occupations:
                         st.markdown(f'''
@@ -350,7 +220,7 @@ def main():
                             <h3>✅ La {salle.lower()} est libre</h3>
                             <p style="font-size: 1.1rem; margin-top: 1rem;">
                                 Le <strong>{format_date_fr(result["date"])}</strong><br>
-                                <span style="font-size: 0.95rem; color: #155724;">Aucune occupation prévue ce jour</span>
+                                <span style="font-size: 0.95rem;">Aucune occupation prévue ce jour</span>
                             </p>
                         </div>
                         ''', unsafe_allow_html=True)
@@ -361,23 +231,20 @@ def main():
                             <p style="font-size: 1.1rem; margin-top: 1rem;">
                                 Le <strong>{format_date_fr(result["date"])}</strong>
                             </p>
-                            <p style="color: #721c24;">{len(occupations)} occupation(s) ce jour</p>
+                            <p style="font-size: 1.1rem; font-weight: bold;">{len(occupations)} occupation(s) ce jour</p>
                         </div>
                         ''', unsafe_allow_html=True)
 
-                        # Afficher les occupations
                         st.markdown("### Créneaux occupés")
 
                         for occ in occupations:
-                            # Affiche l'horaire tel quel depuis le fichier
                             horaire_display = occ["horaire"]
-
                             occupant = occ["occupant"] if occ["occupant"] else "Non précisé"
                             activite = occ["activite"] if occ["activite"] and occ["activite"] != "Non précisée" else ""
 
                             warning = ""
                             if "warning" in occ:
-                                warning = f'<p style="color: #856404; font-size: 0.85rem;">⚠️ {occ["warning"]}</p>'
+                                warning = f'<p style="color: #ca8a04; font-size: 0.85rem;">⚠️ {occ["warning"]}</p>'
 
                             st.markdown(f'''
                             <div class="occupation-card">
@@ -389,12 +256,10 @@ def main():
                             ''', unsafe_allow_html=True)
 
                 else:
-                    # Mode : vérifier à une heure précise
                     result = checker.check_availability(salle.lower(), date_input, heure)
 
-                    # Afficher un avertissement si Google Sheets est inaccessible
                     if "error" in result:
-                        st.warning(f"⚠️ Connexion Google Sheets impossible : {result['error']}. Les réservations ponctuelles ne sont pas affichées.")
+                        st.warning(f"⚠️ Connexion Google Sheets impossible. Les réservations ponctuelles ne sont pas affichées.")
 
                     if result["libre"]:
                         st.markdown(f'''
@@ -407,7 +272,6 @@ def main():
                         ''', unsafe_allow_html=True)
                     else:
                         occupations = result["occupations"]
-                        occupation_count = len(occupations)
 
                         st.markdown(f'''
                         <div class="result-occupe">
@@ -415,23 +279,20 @@ def main():
                             <p style="font-size: 1.1rem; margin-top: 1rem;">
                                 Le <strong>{format_date_fr(result["date"])}</strong> à <strong>{result["heure"].strftime("%Hh%M")}</strong>
                             </p>
-                            <p style="color: #721c24;">{occupation_count} occupation(s) trouvée(s)</p>
+                            <p style="font-size: 1.1rem; font-weight: bold;">{len(occupations)} occupation(s) trouvée(s)</p>
                         </div>
                         ''', unsafe_allow_html=True)
 
-                        # Afficher les occupations
                         st.markdown("### Détails des occupations")
 
                         for occ in occupations:
-                            # Affiche l'horaire tel quel depuis le fichier
                             horaire_display = occ["horaire"]
-
                             occupant = occ["occupant"] if occ["occupant"] else "Non précisé"
                             activite = occ["activite"] if occ["activite"] and occ["activite"] != "Non précisée" else ""
 
                             warning = ""
                             if "warning" in occ:
-                                warning = f'<p style="color: #856404; font-size: 0.85rem;">⚠️ {occ["warning"]}</p>'
+                                warning = f'<p style="color: #ca8a04; font-size: 0.85rem;">⚠️ {occ["warning"]}</p>'
 
                             st.markdown(f'''
                             <div class="occupation-card">
@@ -444,13 +305,12 @@ def main():
 
             except Exception as e:
                 st.error(f"❌ Erreur lors de la vérification : {str(e)}")
-                st.info("Veuillez vérifier que les fichiers Excel sont présents dans le dossier 'salles/'")
+                st.info("Vérifiez que les fichiers Excel sont présents dans le dossier 'salles/'")
 
-    # Footer simple
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.divider()
     st.markdown(
-        '<p style="text-align: center; color: #999; font-size: 0.8rem;">'
-        'Application de gestion des salles'
+        '<p style="text-align: center; color: #9ca3af; font-size: 0.8rem;">'
+        'CFPDC — Application de gestion des salles'
         '</p>',
         unsafe_allow_html=True
     )
