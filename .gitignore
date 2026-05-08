@@ -50,3 +50,9 @@ nohup.out
 
 # Ngrok
 ngrok.log
+
+# Fichiers temporaires
+claude
+code
+conv
+conv_claude_code
