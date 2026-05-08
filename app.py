@@ -21,9 +21,58 @@ st.set_page_config(
 # Design moderne inspiré sites IT/Technology professionnels
 st.markdown("""
 <style>
-    /* Fond clair professionnel */
+    /* Mode clair (défaut) */
     .stApp {
         background: #ffffff;
+    }
+
+    /* Mode sombre - détection automatique */
+    @media (prefers-color-scheme: dark) {
+        .stApp {
+            background: #0f172a;
+        }
+        .main-header {
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+        .sub-header {
+            color: #94a3b8 !important;
+        }
+        h3 {
+            color: #e2e8f0 !important;
+        }
+        label {
+            color: #cbd5e1 !important;
+        }
+        .result-libre {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
+            border-color: #10b981 !important;
+        }
+        .result-libre h3 {
+            color: #6ee7b7 !important;
+        }
+        .result-occupe {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%) !important;
+            border-color: #ef4444 !important;
+        }
+        .result-occupe h3 {
+            color: #fca5a5 !important;
+        }
+        .occupation-card {
+            background: rgba(30, 41, 59, 0.9) !important;
+            border-color: rgba(71, 85, 105, 0.5) !important;
+        }
+        .occupation-card:hover {
+            border-color: #818cf8 !important;
+        }
+        .occupant-name {
+            color: #e2e8f0 !important;
+        }
+        .activity-name {
+            color: #94a3b8 !important;
+        }
     }
 
     /* Header avec dégradé */
