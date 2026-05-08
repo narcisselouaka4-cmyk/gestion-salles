@@ -18,58 +18,125 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS simple et fonctionnel
+# Design moderne et élégant
 st.markdown("""
 <style>
+    /* Fond doux */
+    .stApp {
+        background: linear-gradient(180deg, #fafaf9 0%, #f5f5f4 100%);
+    }
+
+    /* Header */
     .main-header {
         text-align: center;
-        font-size: 2rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-        color: #1e3a5f;
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+        color: #1e293b;
+        letter-spacing: -0.5px;
     }
+
     .sub-header {
         text-align: center;
         font-size: 1rem;
-        color: #666;
-        margin-bottom: 1rem;
+        color: #64748b;
+        margin-bottom: 2rem;
     }
+
+    /* Séparateur élégant */
+    .divider {
+        width: 80px;
+        height: 3px;
+        background: #3b82f6;
+        margin: 0 auto 2rem auto;
+        border-radius: 3px;
+    }
+
+    /* Résultat libre */
     .result-libre {
-        background-color: #d4edda;
-        border-left: 5px solid #28a745;
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+        border-left: 4px solid #22c55e;
         padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
+        border-radius: 12px;
+        margin: 1.5rem 0;
     }
+
+    .result-libre h3 {
+        color: #166534;
+        margin: 0 0 0.5rem 0;
+        font-size: 1.3rem;
+    }
+
+    /* Résultat occupé */
     .result-occupe {
-        background-color: #f8d7da;
-        border-left: 5px solid #dc3545;
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        border-left: 4px solid #ef4444;
         padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
+        border-radius: 12px;
+        margin: 1.5rem 0;
     }
+
+    .result-occupe h3 {
+        color: #991b1b;
+        margin: 0 0 0.5rem 0;
+        font-size: 1.3rem;
+    }
+
+    /* Cartes d'occupation */
     .occupation-card {
-        background-color: white;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.25rem;
+        margin: 0.75rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        transition: all 0.2s ease;
     }
+
+    .occupation-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        border-color: #cbd5e1;
+    }
+
+    /* Horaire */
     .time-display {
-        font-size: 1.1rem;
-        font-weight: bold;
-        color: #1e3a5f;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 0.25rem;
     }
+
+    /* Occupant */
     .occupant-name {
         font-size: 1rem;
-        color: #555;
+        color: #334155;
         margin-top: 0.5rem;
     }
+
+    /* Activité */
     .activity-name {
         font-size: 0.9rem;
-        color: #777;
-        font-style: italic;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+
+    /* Bouton */
+    .stButton > button {
+        background: #3b82f6 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1.5rem !important;
+        font-weight: 500 !important;
+        transition: all 0.2s !important;
+    }
+
+    .stButton > button:hover {
+        background: #2563eb !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59,130,246,0.3) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -91,9 +158,10 @@ def format_date_fr(d):
 
 
 def main():
-    # En-tête simple
-    st.markdown('<div class="main-header">🏢 Gestion des Salles</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Consultez la disponibilité des salles</div>', unsafe_allow_html=True)
+    # En-tête élégant
+    st.markdown('<div class="main-header">✝️ Gestion des Salles</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">CFPDC — Centre de Formation</div>', unsafe_allow_html=True)
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
     # Déterminer le chemin vers les fichiers de salles
     # En priorité : dossier 'salles/' à côté du script, sinon le dossier courant
