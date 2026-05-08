@@ -148,7 +148,7 @@ def format_date_fr(d):
 
 def main():
     # En-tête
-    st.markdown('<div class="main-header">✝️ Gestion des Salles</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">Gestion des Salles</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">CFPDC — Système de réservation</div>', unsafe_allow_html=True)
 
     st.divider()
