@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: gestion-salles
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: GOOGLE_SHEET_ID
+        value: 1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8
+      # Ces secrets doivent être configurés manuellement dans le dashboard Render
+      # après le premier déploiement, dans Settings > Environment Variables :
+      # GOOGLE_CREDENTIALS_TYPE=service_account
+      # GOOGLE_CREDENTIALS_PROJECT_ID=gestion-salles-app
+      # GOOGLE_CREDENTIALS_PRIVATE_KEY_ID=9756130a723707ee5407c2ef4b5d77e86d1c8bdf
+      # GOOGLE_CREDENTIALS_PRIVATE_KEY=<clé privée sur une ligne avec \n>
+      # GOOGLE_CREDENTIALS_CLIENT_EMAIL=cfpdc-nl@gestion-salles-app.iam.gserviceaccount.com
+      # GOOGLE_CREDENTIALS_CLIENT_ID=116713971986219741127

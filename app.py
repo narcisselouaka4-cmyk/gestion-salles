@@ -163,11 +163,13 @@ def main():
     salles_dir = os.path.join(script_dir, "salles")
 
     # ID du Google Sheet pour les réservations
-    # Essayer de lire depuis Streamlit secrets, sinon utiliser la valeur par défaut
-    try:
-        GOOGLE_SHEET_ID = st.secrets.get("app_config", {}).get("google_sheet_id", "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8")
-    except Exception:
-        GOOGLE_SHEET_ID = "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8"
+    # Essayer de lire depuis env vars (Render) puis Streamlit secrets (Streamlit Cloud)
+    GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
+    if not GOOGLE_SHEET_ID:
+        try:
+            GOOGLE_SHEET_ID = st.secrets.get("app_config", {}).get("google_sheet_id", "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8")
+        except Exception:
+            GOOGLE_SHEET_ID = "1y6TKJvafvteEJlJEsU_yjKbORRoSePx1TiL6-Ser6k8"
 
     if not os.path.exists(salles_dir):
         st.error(f"❌ Dossier 'salles/' introuvable. Vérifiez l'installation.")

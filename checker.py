@@ -187,6 +187,7 @@ class SalleChecker:
             scopes = ['https://www.googleapis.com/auth/spreadsheets']
 
             # Essayer de charger depuis Streamlit secrets (pour Streamlit Cloud)
+            # ou depuis les variables d'environnement (pour Render)
             try:
                 import streamlit as st
                 if "google_credentials" in st.secrets:
@@ -194,8 +195,30 @@ class SalleChecker:
                     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
                     self._google_client = gspread.authorize(creds)
                     return self._google_client, None
-            except Exception as e:
-                return None, f"Erreur Streamlit secrets: {str(e)}"
+            except Exception:
+                pass  # Pas sur Streamlit ou pas de secrets
+
+            # Essayer depuis les variables d'environnement (Render)
+            import os
+            if os.environ.get("GOOGLE_CREDENTIALS_TYPE"):
+                try:
+                    private_key = os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY", "")
+                    private_key = private_key.replace("\\n", "\n")
+                    creds_info = {
+                        "type": os.environ.get("GOOGLE_CREDENTIALS_TYPE"),
+                        "project_id": os.environ.get("GOOGLE_CREDENTIALS_PROJECT_ID"),
+                        "private_key_id": os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY_ID"),
+                        "private_key": private_key,
+                        "client_email": os.environ.get("GOOGLE_CREDENTIALS_CLIENT_EMAIL"),
+                        "client_id": os.environ.get("GOOGLE_CREDENTIALS_CLIENT_ID"),
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                    }
+                    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                    self._google_client = gspread.authorize(creds)
+                    return self._google_client, None
+                except Exception as e:
+                    return None, f"Erreur variables d'environnement: {str(e)}"
 
             # Sinon, chercher le fichier credentials.json local
             credentials_paths = [
