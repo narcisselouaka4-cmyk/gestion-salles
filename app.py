@@ -70,20 +70,35 @@ st.markdown("""
         color: #777;
         font-style: italic;
     }
-    /* Masquer le menu du profil et le footer Streamlit */
+    /* Masquer TOUS les éléments Streamlit branding */
+    #MainMenu, header, footer, .stAppDeployButton,
     [data-testid="stAppDeployButton"],
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"],
     .stAppDeployButton,
-    #MainMenu {
-        display: none !important;
-    }
-    [data-testid="stBottom"],
+    .stActionButton,
+    .stDeployButton,
+    [data-testid="stHeader"],
     [data-testid="stFooter"],
-    footer {
+    [data-testid="stBottom"],
+    .st-emotion-cache-zq5gmm,
+    .st-emotion-cache-1avcm0n,
+    .st-emotion-cache-18ni7ap,
+    .st-emotion-cache-1y4p8pa,
+    .st-emotion-cache-14txt5u,
+    .st-emotion-cache-6qob1r,
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    .styles_terminalButton__3x48j,
+    .styles_terminalButton__3x48j {
         display: none !important;
+        visibility: hidden !important;
     }
-    /* Alternative pour le footer dans les anciennes versions */
-    .st-emotion-cache-15ec6l0,
-    .st-emotion-cache-q1c1yq {
+    /* Masquer spécifiquement le footer "Hosted with Streamlit" */
+    .st-emotion-cache-1pd56bt,
+    .st-emotion-cache-164nlkn,
+    .st-emotion-cache-1jicfl7,
+    div[class*="stToolbar"] {
         display: none !important;
     }
 </style>
