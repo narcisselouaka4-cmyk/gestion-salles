@@ -571,7 +571,7 @@ class SalleChecker:
                     reservation_data["fin"] = time(23, 59)
                     # Warning seulement si horaire textuel (pas si vide)
                     if not is_vide:
-                        reservation_data["warning"] = "Horaire non standard"
+                        reservation_data["warning"] = "Horaire non indiqué, veuillez le renseigner"
                     results.append(reservation_data)
 
         except Exception as e:
@@ -693,7 +693,7 @@ class SalleChecker:
                     }
                     # Warning seulement si horaire textuel (pas si vide)
                     if not is_vide:
-                        reservation["warning"] = "Horaire non standard"
+                        reservation["warning"] = "Horaire non indiqué, veuillez le renseigner"
                     results.append(reservation)
 
         except Exception as e:
@@ -886,7 +886,7 @@ class SalleChecker:
                     reservation_data["fin"] = time(23, 59)
                     # Warning seulement si horaire textuel (pas si vide)
                     if not is_vide:
-                        reservation_data["warning"] = "Horaire non standard"
+                        reservation_data["warning"] = "Horaire non indiqué, veuillez le renseigner"
                     results.append(reservation_data)
 
         except Exception as e:
@@ -971,7 +971,7 @@ class SalleChecker:
                     }
                     # Warning seulement si horaire textuel (pas si vide)
                     if not is_vide:
-                        reservation["warning"] = "Horaire non standard"
+                        reservation["warning"] = "Horaire non indiqué, veuillez le renseigner"
                     results.append(reservation)
 
         except Exception as e:
