@@ -180,10 +180,44 @@ st.markdown("""
     
     .detail-item {
         margin: 0.3rem 0;
+        color: #374151;
     }
     
-    .detail-missing {
-        color: #d97706;
+    .detail-item strong {
+        color: #1f2937;
+    }
+    
+    /* Mode sombre */
+    @media (prefers-color-scheme: dark) {
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .occupation-card {
+            background: #1e293b;
+            border-left-color: #818cf8;
+        }
+        
+        .occupant-name {
+            color: #f1f5f9;
+        }
+        
+        .activity-name {
+            color: #94a3b8;
+        }
+        
+        .reservation-details {
+            background: rgba(99, 102, 241, 0.2);
+        }
+        
+        .detail-item {
+            color: #e2e8f0;
+        }
+        
+        .detail-item strong {
+            color: #60a5fa;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
