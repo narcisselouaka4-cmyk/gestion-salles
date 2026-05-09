@@ -211,35 +211,35 @@ def format_reservation_details(occ):
     # Accompte
     accompte = occ.get('accompte', 'Non renseigné')
     if accompte == 'Non renseigné':
-        details.append('<div class="detail-item">💰 <strong>Accompte:</strong> <span class="detail-missing">Non indiqué</span></div>')
+        details.append('<div class="detail-item">💰 <strong>Accompte:</strong> <span style="color: #dc2626;">Non renseigné</span></div>')
     else:
         details.append(f'<div class="detail-item">💰 <strong>Accompte:</strong> {accompte}€</div>')
     
     # Reste à payer
     reste = occ.get('reste_a_payer', 'Non renseigné')
     if reste == 'Non renseigné':
-        details.append('<div class="detail-item">💳 <strong>Reste à payer:</strong> <span class="detail-missing">Non indiqué</span></div>')
+        details.append('<div class="detail-item">💳 <strong>Reste à payer:</strong> <span style="color: #dc2626;">Non renseigné</span></div>')
     else:
         details.append(f'<div class="detail-item">💳 <strong>Reste à payer:</strong> {reste}€</div>')
     
     # Prix de location
     prix = occ.get('prix_location', 'Non renseigné')
     if prix == 'Non renseigné':
-        details.append('<div class="detail-item">💵 <strong>Prix de location:</strong> <span class="detail-missing">Non indiqué</span></div>')
+        details.append('<div class="detail-item">💵 <strong>Prix de location:</strong> <span style="color: #dc2626;">Non renseigné</span></div>')
     else:
         details.append(f'<div class="detail-item">💵 <strong>Prix de location:</strong> {prix}€</div>')
     
     # Caution ménage
     caution = occ.get('caution_menage', 'Non renseigné')
     if caution == 'Non renseigné':
-        details.append('<div class="detail-item">🧹 <strong>Chèque caution ménage:</strong> <span class="detail-missing">Non indiqué</span></div>')
+        details.append('<div class="detail-item">🧹 <strong>Chèque caution ménage:</strong> <span style="color: #dc2626;">Non renseigné</span></div>')
     else:
         details.append(f'<div class="detail-item">🧹 <strong>Chèque caution ménage:</strong> {caution}</div>')
     
     # Salle d'occupation
     salle_occ = occ.get('salle_occupation', 'Non renseigné')
     if salle_occ == 'Non renseigné':
-        details.append('<div class="detail-item">🏠 <strong>Salle d\'occupation:</strong> <span class="detail-missing">Non indiquée</span></div>')
+        details.append('<div class="detail-item">🏠 <strong>Salle d\'occupation:</strong> <span style="color: #dc2626;">Non renseignée</span></div>')
     else:
         details.append(f'<div class="detail-item">🏠 <strong>Salle d\'occupation:</strong> {salle_occ}</div>')
     
