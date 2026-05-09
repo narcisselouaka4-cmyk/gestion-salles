@@ -238,6 +238,16 @@ def format_date_fr(d):
     return f"{jour} {d.day} {mois_fr[d.month]}"
 
 
+def format_montant(valeur):
+    """Formate un montant en ajoutant € si pas déjà présent."""
+    if valeur == 'Non renseigné':
+        return valeur
+    valeur_str = str(valeur).strip()
+    if '€' in valeur_str:
+        return valeur_str
+    return f"{valeur_str}€"
+
+
 def format_reservation_details(occ):
     """Formate les détails d'une réservation avec les infos financières."""
     details = []
@@ -247,21 +257,21 @@ def format_reservation_details(occ):
     if accompte == 'Non renseigné':
         details.append('<div class="detail-item">💰 <strong>Accompte:</strong> <span style="color: #dc2626;">Non renseigné</span></div>')
     else:
-        details.append(f'<div class="detail-item">💰 <strong>Accompte:</strong> {accompte}€</div>')
+        details.append(f'<div class="detail-item">💰 <strong>Accompte:</strong> {format_montant(accompte)}</div>')
     
     # Reste à payer
     reste = occ.get('reste_a_payer', 'Non renseigné')
     if reste == 'Non renseigné':
         details.append('<div class="detail-item">💳 <strong>Reste à payer:</strong> <span style="color: #dc2626;">Non renseigné</span></div>')
     else:
-        details.append(f'<div class="detail-item">💳 <strong>Reste à payer:</strong> {reste}€</div>')
+        details.append(f'<div class="detail-item">💳 <strong>Reste à payer:</strong> {format_montant(reste)}</div>')
     
     # Prix de location
     prix = occ.get('prix_location', 'Non renseigné')
     if prix == 'Non renseigné':
         details.append('<div class="detail-item">💵 <strong>Prix de location:</strong> <span style="color: #dc2626;">Non renseigné</span></div>')
     else:
-        details.append(f'<div class="detail-item">💵 <strong>Prix de location:</strong> {prix}€</div>')
+        details.append(f'<div class="detail-item">💵 <strong>Prix de location:</strong> {format_montant(prix)}</div>')
     
     # Caution ménage
     caution = occ.get('caution_menage', 'Non renseigné')
