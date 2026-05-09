@@ -261,25 +261,25 @@ def main():
                                 caution = occ.get("caution_menage", "Non renseigné")
                                 salle_occ = occ.get("salle_occupation", "Non renseigné")
 
-                                # Notification si informations manquantes
-                                notification = ""
-                                if "infos_manquantes" in occ:
-                                    manquantes = ", ".join(occ["infos_manquantes"])
-                                    notification = f'<p style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem;">🔔 <strong>Non renseigné :</strong> {manquantes}</p>'
+                                # Déterminer les couleurs selon si les infos sont renseignées
+                                prix_style = "color: #15803d;" if prix != "Non renseigné" else "color: #dc2626;"
+                                accompte_style = "color: #15803d;" if accompte != "Non renseigné" else "color: #dc2626;"
+                                reste_style = "color: #15803d;" if reste != "Non renseigné" else "color: #dc2626;"
+                                caution_style = "color: #15803d;" if caution != "Non renseigné" else "color: #dc2626;"
+                                salle_style = "color: #1e3a5f;" if salle_occ != "Non renseigné" else "color: #dc2626;"
 
                                 st.markdown(f'''
                                 <div class="occupation-card">
                                     <div class="time-display">🕐 {horaire_display}</div>
                                     <div class="occupant-name">👤 <strong>{occupant}</strong></div>
                                     {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
-                                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💰 Prix de location : <strong>{prix}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💳 Accompte : <strong>{accompte}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💵 Reste à payer : <strong>{reste}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">🏦 Chèque caution ménage : <strong>{caution}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563;">🚪 Salle d'occupation : <strong>{salle_occ}</strong></div>
+                                    <div style="margin-top: 0.75rem; padding: 0.75rem; background-color: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💰 <strong>Prix location :</strong> <span style="{prix_style} font-weight: 600;">{prix}</span></div>
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💳 <strong>Accompte :</strong> <span style="{accompte_style} font-weight: 600;">{accompte}</span></div>
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💵 <strong>Reste à payer :</strong> <span style="{reste_style} font-weight: 600;">{reste}</span></div>
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">🏦 <strong>Caution ménage :</strong> <span style="{caution_style} font-weight: 600;">{caution}</span></div>
+                                        <div style="font-size: 0.9rem;">🚪 <strong>Salle :</strong> <span style="{salle_style} font-weight: 600;">{salle_occ}</span></div>
                                     </div>
-                                    {notification}
                                     {warning}
                                 </div>
                                 ''', unsafe_allow_html=True)
@@ -340,25 +340,25 @@ def main():
                                 caution = occ.get("caution_menage", "Non renseigné")
                                 salle_occ = occ.get("salle_occupation", "Non renseigné")
 
-                                # Notification si informations manquantes
-                                notification = ""
-                                if "infos_manquantes" in occ:
-                                    manquantes = ", ".join(occ["infos_manquantes"])
-                                    notification = f'<p style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem;">🔔 <strong>Non renseigné :</strong> {manquantes}</p>'
+                                # Déterminer les couleurs selon si les infos sont renseignées
+                                prix_style = "color: #15803d;" if prix != "Non renseigné" else "color: #dc2626;"
+                                accompte_style = "color: #15803d;" if accompte != "Non renseigné" else "color: #dc2626;"
+                                reste_style = "color: #15803d;" if reste != "Non renseigné" else "color: #dc2626;"
+                                caution_style = "color: #15803d;" if caution != "Non renseigné" else "color: #dc2626;"
+                                salle_style = "color: #1e3a5f;" if salle_occ != "Non renseigné" else "color: #dc2626;"
 
                                 st.markdown(f'''
                                 <div class="occupation-card">
                                     <div class="time-display">{horaire_display}</div>
                                     <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
                                     {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
-                                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💰 Prix de location : <strong>{prix}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💳 Accompte : <strong>{accompte}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💵 Reste à payer : <strong>{reste}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">🏦 Chèque caution ménage : <strong>{caution}</strong></div>
-                                        <div style="font-size: 0.85rem; color: #4b5563;">🚪 Salle d'occupation : <strong>{salle_occ}</strong></div>
+                                    <div style="margin-top: 0.75rem; padding: 0.75rem; background-color: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💰 <strong>Prix location :</strong> <span style="{prix_style} font-weight: 600;">{prix}</span></div>
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💳 <strong>Accompte :</strong> <span style="{accompte_style} font-weight: 600;">{accompte}</span></div>
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💵 <strong>Reste à payer :</strong> <span style="{reste_style} font-weight: 600;">{reste}</span></div>
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">🏦 <strong>Caution ménage :</strong> <span style="{caution_style} font-weight: 600;">{caution}</span></div>
+                                        <div style="font-size: 0.9rem;">🚪 <strong>Salle :</strong> <span style="{salle_style} font-weight: 600;">{salle_occ}</span></div>
                                     </div>
-                                    {notification}
                                     {warning}
                                 </div>
                                 ''', unsafe_allow_html=True)
