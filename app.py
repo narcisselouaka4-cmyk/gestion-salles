@@ -261,28 +261,38 @@ def main():
                                 caution = occ.get("caution_menage", "Non renseigné")
                                 salle_occ = occ.get("salle_occupation", "Non renseigné")
 
-                                # Déterminer les couleurs selon si les infos sont renseignées
-                                prix_style = "color: #15803d;" if prix != "Non renseigné" else "color: #dc2626;"
-                                accompte_style = "color: #15803d;" if accompte != "Non renseigné" else "color: #dc2626;"
-                                reste_style = "color: #15803d;" if reste != "Non renseigné" else "color: #dc2626;"
-                                caution_style = "color: #15803d;" if caution != "Non renseigné" else "color: #dc2626;"
-                                salle_style = "color: #1e3a5f;" if salle_occ != "Non renseigné" else "color: #dc2626;"
-
-                                st.markdown(f'''
+                                # Construire le HTML avec format() au lieu de f-string pour éviter les conflits d'accolades
+                                html_content = '''
                                 <div class="occupation-card">
-                                    <div class="time-display">🕐 {horaire_display}</div>
+                                    <div class="time-display">🕐 {horaire}</div>
                                     <div class="occupant-name">👤 <strong>{occupant}</strong></div>
-                                    {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
-                                    <div style="margin-top: 0.75rem; padding: 0.75rem; background-color: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💰 <strong>Prix location :</strong> <span style="{prix_style} font-weight: 600;">{prix}</span></div>
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💳 <strong>Accompte :</strong> <span style="{accompte_style} font-weight: 600;">{accompte}</span></div>
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💵 <strong>Reste à payer :</strong> <span style="{reste_style} font-weight: 600;">{reste}</span></div>
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">🏦 <strong>Caution ménage :</strong> <span style="{caution_style} font-weight: 600;">{caution}</span></div>
-                                        <div style="font-size: 0.9rem;">🚪 <strong>Salle :</strong> <span style="{salle_style} font-weight: 600;">{salle_occ}</span></div>
+                                    {activite_div}
+                                    <div style="margin-top: 0.75rem; padding: 0.75rem; background-color: #f1f5f9; border-radius: 6px;">
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">💰 <strong>Prix location :</strong> <span style="color: {prix_color};">{prix}</span></div>
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">💳 <strong>Accompte :</strong> <span style="color: {accompte_color};">{accompte}</span></div>
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">💵 <strong>Reste à payer :</strong> <span style="color: {reste_color};">{reste}</span></div>
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">🏦 <strong>Caution ménage :</strong> <span style="color: {caution_color};">{caution}</span></div>
+                                        <div style="font-size: 0.95rem;">🚪 <strong>Salle :</strong> <span style="color: {salle_color};">{salle}</span></div>
                                     </div>
                                     {warning}
                                 </div>
-                                ''', unsafe_allow_html=True)
+                                '''.format(
+                                    horaire=horaire_display,
+                                    occupant=occupant,
+                                    activite_div='<div class="activity-name">📝 ' + activite + '</div>' if activite else '',
+                                    prix=prix,
+                                    prix_color='#16a34a' if prix != 'Non renseigné' else '#dc2626',
+                                    accompte=accompte,
+                                    accompte_color='#16a34a' if accompte != 'Non renseigné' else '#dc2626',
+                                    reste=reste,
+                                    reste_color='#16a34a' if reste != 'Non renseigné' else '#dc2626',
+                                    caution=caution,
+                                    caution_color='#16a34a' if caution != 'Non renseigné' else '#dc2626',
+                                    salle=salle_occ,
+                                    salle_color='#1e3a5f' if salle_occ != 'Non renseigné' else '#dc2626',
+                                    warning=warning
+                                )
+                                st.markdown(html_content, unsafe_allow_html=True)
                             else:
                                 st.markdown(f'''
                                 <div class="occupation-card">
@@ -340,28 +350,38 @@ def main():
                                 caution = occ.get("caution_menage", "Non renseigné")
                                 salle_occ = occ.get("salle_occupation", "Non renseigné")
 
-                                # Déterminer les couleurs selon si les infos sont renseignées
-                                prix_style = "color: #15803d;" if prix != "Non renseigné" else "color: #dc2626;"
-                                accompte_style = "color: #15803d;" if accompte != "Non renseigné" else "color: #dc2626;"
-                                reste_style = "color: #15803d;" if reste != "Non renseigné" else "color: #dc2626;"
-                                caution_style = "color: #15803d;" if caution != "Non renseigné" else "color: #dc2626;"
-                                salle_style = "color: #1e3a5f;" if salle_occ != "Non renseigné" else "color: #dc2626;"
-
-                                st.markdown(f'''
+                                # Construire le HTML avec format() au lieu de f-string pour éviter les conflits d'accolades
+                                html_content = '''
                                 <div class="occupation-card">
-                                    <div class="time-display">{horaire_display}</div>
+                                    <div class="time-display">{horaire}</div>
                                     <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
-                                    {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
-                                    <div style="margin-top: 0.75rem; padding: 0.75rem; background-color: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💰 <strong>Prix location :</strong> <span style="{prix_style} font-weight: 600;">{prix}</span></div>
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💳 <strong>Accompte :</strong> <span style="{accompte_style} font-weight: 600;">{accompte}</span></div>
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">💵 <strong>Reste à payer :</strong> <span style="{reste_style} font-weight: 600;">{reste}</span></div>
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">🏦 <strong>Caution ménage :</strong> <span style="{caution_style} font-weight: 600;">{caution}</span></div>
-                                        <div style="font-size: 0.9rem;">🚪 <strong>Salle :</strong> <span style="{salle_style} font-weight: 600;">{salle_occ}</span></div>
+                                    {activite_div}
+                                    <div style="margin-top: 0.75rem; padding: 0.75rem; background-color: #f1f5f9; border-radius: 6px;">
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">💰 <strong>Prix location :</strong> <span style="color: {prix_color};">{prix}</span></div>
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">💳 <strong>Accompte :</strong> <span style="color: {accompte_color};">{accompte}</span></div>
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">💵 <strong>Reste à payer :</strong> <span style="color: {reste_color};">{reste}</span></div>
+                                        <div style="font-size: 0.95rem; margin-bottom: 0.3rem;">🏦 <strong>Caution ménage :</strong> <span style="color: {caution_color};">{caution}</span></div>
+                                        <div style="font-size: 0.95rem;">🚪 <strong>Salle :</strong> <span style="color: {salle_color};">{salle}</span></div>
                                     </div>
                                     {warning}
                                 </div>
-                                ''', unsafe_allow_html=True)
+                                '''.format(
+                                    horaire=horaire_display,
+                                    occupant=occupant,
+                                    activite_div='<div class="activity-name">📝 ' + activite + '</div>' if activite else '',
+                                    prix=prix,
+                                    prix_color='#16a34a' if prix != 'Non renseigné' else '#dc2626',
+                                    accompte=accompte,
+                                    accompte_color='#16a34a' if accompte != 'Non renseigné' else '#dc2626',
+                                    reste=reste,
+                                    reste_color='#16a34a' if reste != 'Non renseigné' else '#dc2626',
+                                    caution=caution,
+                                    caution_color='#16a34a' if caution != 'Non renseigné' else '#dc2626',
+                                    salle=salle_occ,
+                                    salle_color='#1e3a5f' if salle_occ != 'Non renseigné' else '#dc2626',
+                                    warning=warning
+                                )
+                                st.markdown(html_content, unsafe_allow_html=True)
                             else:
                                 st.markdown(f'''
                                 <div class="occupation-card">
