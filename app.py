@@ -251,7 +251,7 @@ def main():
     st.markdown('''
     <div class="main-header">
         <h1>🏢 Gestion des Salles</h1>
-        <div class="sub-header">CFPDC — Centre de Formation et de Prière du Divin Créateur</div>
+        <div class="sub-header">CFPDC — Centre de Formation Pédagogique des Disciples du Christ</div>
     </div>
     ''', unsafe_allow_html=True)
 
