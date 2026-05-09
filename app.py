@@ -167,6 +167,24 @@ st.markdown("""
         padding: 1.5rem;
         border-top: 1px solid #e5e7eb;
     }
+    
+    /* Détails réservation */
+    .reservation-details {
+        margin-top: 1rem;
+        padding: 0.75rem;
+        background: rgba(99, 102, 241, 0.1);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+    
+    .detail-item {
+        margin: 0.3rem 0;
+    }
+    
+    .detail-missing {
+        color: #d97706;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -184,6 +202,48 @@ def format_date_fr(d):
     }
     jour = jours_fr.get(d.strftime("%A"), d.strftime("%A"))
     return f"{jour} {d.day} {mois_fr[d.month]}"
+
+
+def format_reservation_details(occ):
+    """Formate les détails d'une réservation avec les infos financières."""
+    details = []
+    
+    # Accompte
+    accompte = occ.get('accompte', 'Non renseigné')
+    if accompte == 'Non renseigné':
+        details.append('<div class="detail-item">💰 <strong>Accompte:</strong> <span class="detail-missing">⚠️ Non indiqué</span></div>')
+    else:
+        details.append(f'<div class="detail-item">💰 <strong>Accompte:</strong> {accompte}€</div>')
+    
+    # Reste à payer
+    reste = occ.get('reste_a_payer', 'Non renseigné')
+    if reste == 'Non renseigné':
+        details.append('<div class="detail-item">💳 <strong>Reste à payer:</strong> <span class="detail-missing">⚠️ Non indiqué</span></div>')
+    else:
+        details.append(f'<div class="detail-item">💳 <strong>Reste à payer:</strong> {reste}€</div>')
+    
+    # Prix de location
+    prix = occ.get('prix_location', 'Non renseigné')
+    if prix == 'Non renseigné':
+        details.append('<div class="detail-item">💵 <strong>Prix de location:</strong> <span class="detail-missing">⚠️ Non indiqué</span></div>')
+    else:
+        details.append(f'<div class="detail-item">💵 <strong>Prix de location:</strong> {prix}€</div>')
+    
+    # Caution ménage
+    caution = occ.get('caution_menage', 'Non renseigné')
+    if caution == 'Non renseigné':
+        details.append('<div class="detail-item">🧹 <strong>Chèque caution ménage:</strong> <span class="detail-missing">⚠️ Non indiqué</span></div>')
+    else:
+        details.append(f'<div class="detail-item">🧹 <strong>Chèque caution ménage:</strong> {caution}</div>')
+    
+    # Salle d'occupation
+    salle_occ = occ.get('salle_occupation', 'Non renseigné')
+    if salle_occ == 'Non renseigné':
+        details.append('<div class="detail-item">🏠 <strong>Salle d\'occupation:</strong> <span class="detail-missing">⚠️ Non indiquée</span></div>')
+    else:
+        details.append(f'<div class="detail-item">🏠 <strong>Salle d\'occupation:</strong> {salle_occ}</div>')
+    
+    return ''.join(details)
 
 
 def main():
@@ -290,6 +350,11 @@ def main():
                             horaire_display = occ["horaire"]
                             occupant = occ["occupant"] if occ["occupant"] else "Non précisé"
                             activite = occ["activite"] if occ["activite"] and occ["activite"] != "Non précisée" else ""
+                            
+                            # Récupérer les détails de réservation si disponibles
+                            details_html = ""
+                            if occ.get('source') == 'réservation':
+                                details_html = f'<div class="reservation-details">{format_reservation_details(occ)}</div>'
 
                             warning = ""
                             if "warning" in occ:
@@ -300,6 +365,7 @@ def main():
                                 <div class="time-display">🕐 {horaire_display}</div>
                                 <div class="occupant-name">👤 <strong>{occupant}</strong></div>
                                 {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
+                                {details_html}
                                 {warning}
                             </div>
                             ''', unsafe_allow_html=True)
@@ -339,6 +405,11 @@ def main():
                             horaire_display = occ["horaire"]
                             occupant = occ["occupant"] if occ["occupant"] else "Non précisé"
                             activite = occ["activite"] if occ["activite"] and occ["activite"] != "Non précisée" else ""
+                            
+                            # Récupérer les détails de réservation si disponibles
+                            details_html = ""
+                            if occ.get('source') == 'réservation':
+                                details_html = f'<div class="reservation-details">{format_reservation_details(occ)}</div>'
 
                             warning = ""
                             if "warning" in occ:
@@ -349,6 +420,7 @@ def main():
                                 <div class="time-display">🕐 {horaire_display}</div>
                                 <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
                                 {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
+                                {details_html}
                                 {warning}
                             </div>
                             ''', unsafe_allow_html=True)
