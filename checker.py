@@ -5,6 +5,8 @@ Logique métier complète pour lire les fichiers Excel et Google Sheets.
 
 import re
 import os
+import base64
+import json
 from datetime import datetime, time, date
 from openpyxl import load_workbook
 
@@ -198,8 +200,21 @@ class SalleChecker:
             except Exception:
                 pass  # Pas sur Streamlit ou pas de secrets
 
-            # Essayer depuis les variables d'environnement (Render)
+            # Essayer depuis GOOGLE_CREDENTIALS_JSON (base64) - Render
             import os
+            if os.environ.get("GOOGLE_CREDENTIALS_JSON"):
+                try:
+                    json_b64 = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+                    # Décoder le base64
+                    json_bytes = base64.b64decode(json_b64)
+                    creds_info = json.loads(json_bytes)
+                    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                    self._google_client = gspread.authorize(creds)
+                    return self._google_client, None
+                except Exception as json_error:
+                    return None, f"Erreur GOOGLE_CREDENTIALS_JSON: {str(json_error)}"
+
+            # Essayer depuis les variables d'environnement individuelles (Render)
             if os.environ.get("GOOGLE_CREDENTIALS_TYPE"):
                 try:
                     private_key = os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY", "")
@@ -224,9 +239,13 @@ class SalleChecker:
                     import os
                     possible_paths = [
                         "/etc/secrets/google-credentials.json",
+                        "/etc/secrets/gcp_credentials.json",
                         "/mnt/secrets/google-credentials.json",
+                        "/mnt/secrets/gcp_credentials.json",
                         "/secrets/google-credentials.json",
+                        "/secrets/gcp_credentials.json",
                         "google-credentials.json",
+                        "gcp_credentials.json",
                     ]
                     for secret_path in possible_paths:
                         if os.path.exists(secret_path):
@@ -241,8 +260,11 @@ class SalleChecker:
             # Sinon, chercher le fichier credentials.json local
             credentials_paths = [
                 os.path.join(os.path.dirname(__file__), "credentials.json"),
+                os.path.join(os.path.dirname(__file__), "gcp_credentials.json"),
                 "/home/visiteur/projet_salles/credentials.json",
+                "/home/visiteur/projet_salles/gcp_credentials.json",
                 "credentials.json",
+                "gcp_credentials.json",
             ]
 
             creds_path = None
