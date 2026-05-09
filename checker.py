@@ -446,25 +446,26 @@ class SalleChecker:
 
     def _handle_horaire_cell(self, horaire_cell):
         """
-        Gère une cellule horaire et retourne (debut, fin, label, is_parseable).
+        Gère une cellule horaire et retourne (debut, fin, label, is_parseable, is_vide).
         - is_parseable = True si on a pu extraire des heures numériques
         - label = texte à afficher dans l'interface
+        - is_vide = True si la cellule est vide/None
         """
         if horaire_cell is None:
-            return None, None, "Horaire non indiqué", False
+            return None, None, "Horaire non indiqué", False, True
 
         horaire_str = str(horaire_cell).strip()
 
         if not horaire_str:
-            return None, None, "Horaire non indiqué", False
+            return None, None, "Horaire non indiqué", False, True
 
         # Tenter le parsing numérique
         try:
             debut, fin = parse_horaire(horaire_str)
-            return debut, fin, horaire_str, True
+            return debut, fin, horaire_str, True, False
         except Exception:
-            # Pas parseable → afficher tel quel
-            return None, None, horaire_str, False
+            # Pas parseable mais contient du texte → warning
+            return None, None, horaire_str, False, False
 
     def _get_cell_value(self, row, index, default="Non renseigné"):
         """Récupère la valeur d'une cellule avec une valeur par défaut."""
@@ -543,7 +544,7 @@ class SalleChecker:
                     infos_manquantes.append("Salle d'occupation")
 
                 # Gérer l'horaire
-                debut, fin, label, is_parseable = self._handle_horaire_cell(horaire_cell)
+                debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
 
                 reservation_data = {
                     "occupant": nom,
@@ -568,9 +569,9 @@ class SalleChecker:
                 else:
                     reservation_data["debut"] = time(0, 0)
                     reservation_data["fin"] = time(23, 59)
-                    if not reservation_data.get("warning"):
-                        reservation_data["warning"] = ""
-                    reservation_data["warning"] += "Horaire non indiqué" if not reservation_data.get("warning") else " | Horaire non indiqué"
+                    # Warning seulement si horaire textuel (pas si vide)
+                    if not is_vide:
+                        reservation_data["warning"] = "Horaire non standard"
                     results.append(reservation_data)
 
         except Exception as e:
@@ -655,7 +656,7 @@ class SalleChecker:
                 nom = str(nom_cell).strip() if nom_cell else "Inconnu"
 
                 # Gérer l'horaire
-                debut, fin, label, is_parseable = self._handle_horaire_cell(horaire_cell)
+                debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
 
                 if is_parseable:
                     # Horaire numérique → vérifier si dans le créneau
@@ -676,7 +677,7 @@ class SalleChecker:
                         })
                 else:
                     # Horaire textuel ou non indiqué
-                    results.append({
+                    reservation = {
                         "occupant": nom,
                         "activite": "Réservation ponctuelle",
                         "horaire": label,
@@ -688,9 +689,12 @@ class SalleChecker:
                         "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
                         "debut": time(0, 0),
                         "fin": time(23, 59),
-                        "source": "réservation",
-                        "warning": "Horaire non indiqué"
-                    })
+                        "source": "réservation"
+                    }
+                    # Warning seulement si horaire textuel (pas si vide)
+                    if not is_vide:
+                        reservation["warning"] = "Horaire non standard"
+                    results.append(reservation)
 
         except Exception as e:
             return results, f"Erreur lecture réservations: {str(e)}"
@@ -856,7 +860,7 @@ class SalleChecker:
                 if salle_occupation == "Non renseigné":
                     infos_manquantes.append("Salle d'occupation")
 
-                debut, fin, label, is_parseable = self._handle_horaire_cell(horaire_cell)
+                debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
 
                 reservation_data = {
                     "occupant": nom,
@@ -880,7 +884,9 @@ class SalleChecker:
                 else:
                     reservation_data["debut"] = time(0, 0)
                     reservation_data["fin"] = time(23, 59)
-                    reservation_data["warning"] = "Horaire non indiqué"
+                    # Warning seulement si horaire textuel (pas si vide)
+                    if not is_vide:
+                        reservation_data["warning"] = "Horaire non standard"
                     results.append(reservation_data)
 
         except Exception as e:
@@ -930,7 +936,7 @@ class SalleChecker:
                 nom = str(nom_cell).strip() if nom_cell else "Inconnu"
 
                 # Gérer l'horaire avec la même logique
-                debut, fin, label, is_parseable = self._handle_horaire_cell(horaire_cell)
+                debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
 
                 if is_parseable:
                     results.append({
@@ -949,7 +955,7 @@ class SalleChecker:
                     })
                 else:
                     # Horaire textuel ou non indiqué
-                    results.append({
+                    reservation = {
                         "occupant": nom,
                         "activite": "Réservation ponctuelle",
                         "horaire": label,
@@ -961,9 +967,12 @@ class SalleChecker:
                         "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
                         "debut": time(0, 0),
                         "fin": time(23, 59),
-                        "source": "réservation",
-                        "warning": "Horaire non indiqué"
-                    })
+                        "source": "réservation"
+                    }
+                    # Warning seulement si horaire textuel (pas si vide)
+                    if not is_vide:
+                        reservation["warning"] = "Horaire non standard"
+                    results.append(reservation)
 
         except Exception as e:
             return results, f"Erreur lecture réservations: {str(e)}"
