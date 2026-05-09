@@ -466,6 +466,12 @@ class SalleChecker:
             # Pas parseable → afficher tel quel
             return None, None, horaire_str, False
 
+    def _get_cell_value(self, row, index, default="Non renseigné"):
+        """Récupère la valeur d'une cellule avec une valeur par défaut."""
+        if len(row) > index and row[index]:
+            return str(row[index]).strip()
+        return default
+
     def check_reservations_google(self, salle_name: str, d: date, time_requested: time) -> tuple:
         """
         Vérifie les réservations depuis Google Sheets.
@@ -502,6 +508,12 @@ class SalleChecker:
                 nom_cell = row[2] if len(row) > 2 else None    # Colonne C
                 horaire_cell = row[3] if len(row) > 3 else None  # Colonne D
                 date_cell = row[4] if len(row) > 4 else None    # Colonne E
+                # Nouvelles colonnes (F, G, H, I, J)
+                accompte = self._get_cell_value(row, 5)       # Colonne F
+                reste = self._get_cell_value(row, 6)          # Colonne G
+                prix_location = self._get_cell_value(row, 7)  # Colonne H
+                caution = self._get_cell_value(row, 8)        # Colonne I
+                salle_occupation = self._get_cell_value(row, 9) # Colonne J
 
                 if not salle_cell or not date_cell:
                     continue
@@ -517,29 +529,49 @@ class SalleChecker:
 
                 nom = str(nom_cell).strip() if nom_cell else "Inconnu"
 
+                # Vérifier si certaines infos financières sont manquantes
+                infos_manquantes = []
+                if accompte == "Non renseigné":
+                    infos_manquantes.append("Accompte")
+                if reste == "Non renseigné":
+                    infos_manquantes.append("Reste à payer")
+                if prix_location == "Non renseigné":
+                    infos_manquantes.append("Prix de location")
+                if caution == "Non renseigné":
+                    infos_manquantes.append("Chèque caution ménage")
+                if salle_occupation == "Non renseigné":
+                    infos_manquantes.append("Salle d'occupation")
+
                 # Gérer l'horaire
                 debut, fin, label, is_parseable = self._handle_horaire_cell(horaire_cell)
 
+                reservation_data = {
+                    "occupant": nom,
+                    "activite": "Réservation ponctuelle",
+                    "horaire": label,
+                    "accompte": accompte,
+                    "reste_a_payer": reste,
+                    "prix_location": prix_location,
+                    "caution_menage": caution,
+                    "salle_occupation": salle_occupation,
+                    "source": "réservation"
+                }
+
+                if infos_manquantes:
+                    reservation_data["infos_manquantes"] = infos_manquantes
+
                 if is_parseable:
                     if time_in_range(time_requested, debut, fin):
-                        results.append({
-                            "occupant": nom,
-                            "activite": "Réservation ponctuelle",
-                            "horaire": label,
-                            "debut": debut,
-                            "fin": fin,
-                            "source": "réservation"
-                        })
+                        reservation_data["debut"] = debut
+                        reservation_data["fin"] = fin
+                        results.append(reservation_data)
                 else:
-                    results.append({
-                        "occupant": nom,
-                        "activite": "Réservation ponctuelle",
-                        "horaire": label,
-                        "debut": time(0, 0),
-                        "fin": time(23, 59),
-                        "source": "réservation",
-                        "warning": "Horaire non indiqué"
-                    })
+                    reservation_data["debut"] = time(0, 0)
+                    reservation_data["fin"] = time(23, 59)
+                    if not reservation_data.get("warning"):
+                        reservation_data["warning"] = ""
+                    reservation_data["warning"] += "Horaire non indiqué" if not reservation_data.get("warning") else " | Horaire non indiqué"
+                    results.append(reservation_data)
 
         except Exception as e:
             return results, f"Erreur lecture Google Sheets: {str(e)}"
@@ -632,6 +664,12 @@ class SalleChecker:
                             "occupant": nom,
                             "activite": "Réservation ponctuelle",
                             "horaire": label,
+                            "accompte": "Non renseigné",
+                            "reste_a_payer": "Non renseigné",
+                            "prix_location": "Non renseigné",
+                            "caution_menage": "Non renseigné",
+                            "salle_occupation": "Non renseigné",
+                            "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
                             "debut": debut,
                             "fin": fin,
                             "source": "réservation"
@@ -642,6 +680,12 @@ class SalleChecker:
                         "occupant": nom,
                         "activite": "Réservation ponctuelle",
                         "horaire": label,
+                        "accompte": "Non renseigné",
+                        "reste_a_payer": "Non renseigné",
+                        "prix_location": "Non renseigné",
+                        "caution_menage": "Non renseigné",
+                        "salle_occupation": "Non renseigné",
+                        "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
                         "debut": time(0, 0),
                         "fin": time(23, 59),
                         "source": "réservation",
@@ -780,6 +824,12 @@ class SalleChecker:
                 nom_cell = row[2] if len(row) > 2 else None
                 horaire_cell = row[3] if len(row) > 3 else None
                 date_cell = row[4] if len(row) > 4 else None
+                # Nouvelles colonnes (F, G, H, I, J)
+                accompte = self._get_cell_value(row, 5)       # Colonne F
+                reste = self._get_cell_value(row, 6)          # Colonne G
+                prix_location = self._get_cell_value(row, 7)  # Colonne H
+                caution = self._get_cell_value(row, 8)        # Colonne I
+                salle_occupation = self._get_cell_value(row, 9) # Colonne J
 
                 if not salle_cell or not date_cell:
                     continue
@@ -793,27 +843,45 @@ class SalleChecker:
 
                 nom = str(nom_cell).strip() if nom_cell else "Inconnu"
 
+                # Vérifier si certaines infos financières sont manquantes
+                infos_manquantes = []
+                if accompte == "Non renseigné":
+                    infos_manquantes.append("Accompte")
+                if reste == "Non renseigné":
+                    infos_manquantes.append("Reste à payer")
+                if prix_location == "Non renseigné":
+                    infos_manquantes.append("Prix de location")
+                if caution == "Non renseigné":
+                    infos_manquantes.append("Chèque caution ménage")
+                if salle_occupation == "Non renseigné":
+                    infos_manquantes.append("Salle d'occupation")
+
                 debut, fin, label, is_parseable = self._handle_horaire_cell(horaire_cell)
 
+                reservation_data = {
+                    "occupant": nom,
+                    "activite": "Réservation ponctuelle",
+                    "horaire": label,
+                    "accompte": accompte,
+                    "reste_a_payer": reste,
+                    "prix_location": prix_location,
+                    "caution_menage": caution,
+                    "salle_occupation": salle_occupation,
+                    "source": "réservation"
+                }
+
+                if infos_manquantes:
+                    reservation_data["infos_manquantes"] = infos_manquantes
+
                 if is_parseable:
-                    results.append({
-                        "occupant": nom,
-                        "activite": "Réservation ponctuelle",
-                        "horaire": label,
-                        "debut": debut,
-                        "fin": fin,
-                        "source": "réservation"
-                    })
+                    reservation_data["debut"] = debut
+                    reservation_data["fin"] = fin
+                    results.append(reservation_data)
                 else:
-                    results.append({
-                        "occupant": nom,
-                        "activite": "Réservation ponctuelle",
-                        "horaire": label,
-                        "debut": time(0, 0),
-                        "fin": time(23, 59),
-                        "source": "réservation",
-                        "warning": "Horaire non indiqué"
-                    })
+                    reservation_data["debut"] = time(0, 0)
+                    reservation_data["fin"] = time(23, 59)
+                    reservation_data["warning"] = "Horaire non indiqué"
+                    results.append(reservation_data)
 
         except Exception as e:
             return results, f"Erreur lecture Google Sheets (get_all): {str(e)}"
@@ -869,6 +937,12 @@ class SalleChecker:
                         "occupant": nom,
                         "activite": "Réservation ponctuelle",
                         "horaire": label,
+                        "accompte": "Non renseigné",
+                        "reste_a_payer": "Non renseigné",
+                        "prix_location": "Non renseigné",
+                        "caution_menage": "Non renseigné",
+                        "salle_occupation": "Non renseigné",
+                        "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
                         "debut": debut,
                         "fin": fin,
                         "source": "réservation"
@@ -879,6 +953,12 @@ class SalleChecker:
                         "occupant": nom,
                         "activite": "Réservation ponctuelle",
                         "horaire": label,
+                        "accompte": "Non renseigné",
+                        "reste_a_payer": "Non renseigné",
+                        "prix_location": "Non renseigné",
+                        "caution_menage": "Non renseigné",
+                        "salle_occupation": "Non renseigné",
+                        "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
                         "debut": time(0, 0),
                         "fin": time(23, 59),
                         "source": "réservation",

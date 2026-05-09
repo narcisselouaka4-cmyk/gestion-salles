@@ -253,11 +253,38 @@ def main():
                             if "warning" in occ:
                                 warning = f'<p style="color: #ca8a04; font-size: 0.85rem;">⚠️ {occ["warning"]}</p>'
 
+                            # Afficher les informations financières pour les réservations
+                            info_finance = ""
+                            if occ.get("source") == "réservation":
+                                accompte = occ.get("accompte", "Non renseigné")
+                                reste = occ.get("reste_a_payer", "Non renseigné")
+                                prix = occ.get("prix_location", "Non renseigné")
+                                caution = occ.get("caution_menage", "Non renseigné")
+                                salle_occ = occ.get("salle_occupation", "Non renseigné")
+
+                                info_finance = f'''
+                                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💰 Prix de location : <strong>{prix}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💳 Accompte : <strong>{accompte}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💵 Reste à payer : <strong>{reste}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">🏦 Chèque caution ménage : <strong>{caution}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563;">🚪 Salle d'occupation : <strong>{salle_occ}</strong></div>
+                                </div>
+                                '''
+
+                            # Notification si informations manquantes
+                            notification = ""
+                            if "infos_manquantes" in occ:
+                                manquantes = ", ".join(occ["infos_manquantes"])
+                                notification = f'<p style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem;">🔔 <strong>Non renseigné :</strong> {manquantes}</p>'
+
                             st.markdown(f'''
                             <div class="occupation-card">
                                 <div class="time-display">🕐 {horaire_display}</div>
                                 <div class="occupant-name">👤 <strong>{occupant}</strong></div>
                                 {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
+                                {info_finance if occ.get("source") == "réservation" else ''}
+                                {notification}
                                 {warning}
                             </div>
                             ''', unsafe_allow_html=True)
@@ -301,11 +328,38 @@ def main():
                             if "warning" in occ:
                                 warning = f'<p style="color: #ca8a04; font-size: 0.85rem;">⚠️ {occ["warning"]}</p>'
 
+                            # Afficher les informations financières pour les réservations
+                            info_finance = ""
+                            if occ.get("source") == "réservation":
+                                accompte = occ.get("accompte", "Non renseigné")
+                                reste = occ.get("reste_a_payer", "Non renseigné")
+                                prix = occ.get("prix_location", "Non renseigné")
+                                caution = occ.get("caution_menage", "Non renseigné")
+                                salle_occ = occ.get("salle_occupation", "Non renseigné")
+
+                                info_finance = f'''
+                                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💰 Prix de location : <strong>{prix}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💳 Accompte : <strong>{accompte}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">💵 Reste à payer : <strong>{reste}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563; margin-bottom: 0.3rem;">🏦 Chèque caution ménage : <strong>{caution}</strong></div>
+                                    <div style="font-size: 0.85rem; color: #4b5563;">🚪 Salle d'occupation : <strong>{salle_occ}</strong></div>
+                                </div>
+                                '''
+
+                            # Notification si informations manquantes
+                            notification = ""
+                            if "infos_manquantes" in occ:
+                                manquantes = ", ".join(occ["infos_manquantes"])
+                                notification = f'<p style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem;">🔔 <strong>Non renseigné :</strong> {manquantes}</p>'
+
                             st.markdown(f'''
                             <div class="occupation-card">
                                 <div class="time-display">{horaire_display}</div>
                                 <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
                                 {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
+                                {info_finance if occ.get("source") == "réservation" else ''}
+                                {notification}
                                 {warning}
                             </div>
                             ''', unsafe_allow_html=True)
