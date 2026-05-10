@@ -377,52 +377,50 @@ def main():
                     occupant = occ.get("occupant", "Non précisé")
                     activite = occ.get("activite", "")
                     
-                    # Préparer les infos financières pour affichage
+                    # Préparer les infos financières pour affichage - uniquement si renseigné
+                    details_items = []
+                    
                     accompte_display = occ.get('accompte', '')
-                    if not accompte_display or accompte_display == 'Non renseigné':
-                        accompte_html = '💰 <strong>Accompte (€)</strong> <span style="color: #dc2626;">Non renseigné</span>'
-                    else:
-                        accompte_html = f'💰 <strong>Accompte (€)</strong> {accompte_display}'
+                    if accompte_display and accompte_display != 'Non renseigné':
+                        details_items.append(f'💰 <strong>Accompte (€)</strong> {accompte_display}')
                     
                     reste_display = occ.get('reste_a_payer', '')
-                    if not reste_display or reste_display == 'Non renseigné':
-                        reste_html = '💳 <strong>Reste à payer (€)</strong> <span style="color: #dc2626;">Non renseigné</span>'
-                    else:
-                        reste_html = f'💳 <strong>Reste à payer (€)</strong> {reste_display}'
+                    if reste_display and reste_display != 'Non renseigné':
+                        details_items.append(f'💳 <strong>Reste à payer (€)</strong> {reste_display}')
                     
                     prix_display = occ.get('prix_location', '')
-                    if not prix_display or prix_display == 'Non renseigné':
-                        prix_html = '💵 <strong>Prix location (€)</strong> <span style="color: #dc2626;">Non renseigné</span>'
-                    else:
-                        prix_html = f'💵 <strong>Prix location (€)</strong> {prix_display}'
+                    if prix_display and prix_display != 'Non renseigné':
+                        details_items.append(f'💵 <strong>Prix location (€)</strong> {prix_display}')
                     
                     caution_display = occ.get('caution_menage', '')
-                    if not caution_display or caution_display == 'Non renseigné':
-                        caution_html = '🧹 <strong>Caution</strong> <span style="color: #dc2626;">Non renseigné</span>'
-                    else:
-                        caution_html = f'🧹 <strong>Caution</strong> {caution_display}'
+                    if caution_display and caution_display != 'Non renseigné':
+                        details_items.append(f'🧹 <strong>Caution</strong> {caution_display}')
                     
                     salle_occ_display = occ.get('salle_occupation', '')
-                    if not salle_occ_display or salle_occ_display == 'Non renseigné':
-                        salle_html = '🏠 <strong>Salle</strong> <span style="color: #dc2626;">Non renseigné</span>'
-                    else:
-                        salle_html = f'🏠 <strong>Salle</strong> {salle_occ_display}'
+                    if salle_occ_display and salle_occ_display != 'Non renseigné':
+                        details_items.append(f'🏠 <strong>Salle</strong> {salle_occ_display}')
+                    
+                    # Joindre les éléments avec <br> s'il y en a
+                    details_html = '<br>'.join(details_items) if details_items else ''
                     
                     with st.container():
-                        st.markdown(f'''
+                        # Afficher la carte
+                        card_content = f'''
                         <div class="occupation-card">
                             <div class="time-display">🕐 {horaire_display}</div>
                             <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
                             {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
+                        '''
+                        
+                        if details_html:
+                            card_content += f'''
                             <div class="reservation-details">
-                                {accompte_html}<br>
-                                {reste_html}<br>
-                                {prix_html}<br>
-                                {caution_html}<br>
-                                {salle_html}
+                                {details_html}
                             </div>
-                        </div>
-                        ''', unsafe_allow_html=True)
+                            '''
+                        
+                        card_content += '</div>'
+                        st.markdown(card_content, unsafe_allow_html=True)
                         
                         # Formulaire d'édition
                         if occ.get('source') == 'réservation':
