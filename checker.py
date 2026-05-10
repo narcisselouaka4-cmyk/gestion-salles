@@ -555,6 +555,7 @@ class SalleChecker:
                     "reste_a_payer": reste,
                     "prix_location": prix_location,
                     "caution_menage": caution,
+                    "salle": str(salle_cell).strip() if salle_cell else "",
                     "salle_occupation": salle_occupation,
                     "source": "réservation"
                 }
@@ -871,6 +872,7 @@ class SalleChecker:
                     "reste_a_payer": reste,
                     "prix_location": prix_location,
                     "caution_menage": caution,
+                    "salle": str(salle_cell).strip() if salle_cell else "",
                     "salle_occupation": salle_occupation,
                     "source": "réservation"
                 }
@@ -955,6 +957,7 @@ class SalleChecker:
                         else:
                             clear_ranges.append(f'{col_letter}{row_idx}')
 
+                _add_update('B', 'salle')
                 _add_update('C', 'occupant')
                 _add_update('F', 'accompte')
                 _add_update('G', 'reste_a_payer')

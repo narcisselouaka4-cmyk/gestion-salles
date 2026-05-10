@@ -379,48 +379,43 @@ def main():
                     
                     # Préparer les infos financières pour affichage - uniquement si renseigné
                     details_items = []
-                    
+
                     accompte_display = occ.get('accompte', '')
-                    if accompte_display and accompte_display != 'Non renseigné':
+                    if accompte_display:
                         details_items.append(f'💰 <strong>Accompte (€)</strong> {accompte_display}')
-                    
+
                     reste_display = occ.get('reste_a_payer', '')
-                    if reste_display and reste_display != 'Non renseigné':
+                    if reste_display:
                         details_items.append(f'💳 <strong>Reste à payer (€)</strong> {reste_display}')
-                    
+
                     prix_display = occ.get('prix_location', '')
-                    if prix_display and prix_display != 'Non renseigné':
+                    if prix_display:
                         details_items.append(f'💵 <strong>Prix location (€)</strong> {prix_display}')
-                    
+
                     caution_display = occ.get('caution_menage', '')
-                    if caution_display and caution_display != 'Non renseigné':
+                    if caution_display:
                         details_items.append(f'🧹 <strong>Caution</strong> {caution_display}')
-                    
-                    salle_occ_display = occ.get('salle_occupation', '')
-                    if salle_occ_display and salle_occ_display != 'Non renseigné':
-                        details_items.append(f'🏠 <strong>Salle</strong> {salle_occ_display}')
-                    
+
+                    salle_display = occ.get('salle', '')
+                    if salle_display:
+                        details_items.append(f'🏠 <strong>Salle</strong> {salle_display}')
+
                     # Joindre les éléments avec <br> s'il y en a
                     details_html = '<br>'.join(details_items) if details_items else ''
-                    
+
                     with st.container():
-                        # Afficher la carte
-                        card_content = f'''
-                        <div class="occupation-card">
-                            <div class="time-display">🕐 {horaire_display}</div>
-                            <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
-                            {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
-                        '''
-                        
+                        # Afficher la carte en HTML compact (pas de sauts de ligne)
+                        parts = [
+                            f'<div class="occupation-card">',
+                            f'<div class="time-display">🕐 {horaire_display}</div>',
+                            f'<div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>',
+                        ]
+                        if activite:
+                            parts.append(f'<div class="activity-name">📝 {activite}</div>')
                         if details_html:
-                            card_content += f'''
-                            <div class="reservation-details">
-                                {details_html}
-                            </div>
-                            '''
-                        
-                        card_content += '</div>'
-                        st.markdown(card_content, unsafe_allow_html=True)
+                            parts.append(f'<div class="reservation-details">{details_html}</div>')
+                        parts.append('</div>')
+                        st.markdown(''.join(parts), unsafe_allow_html=True)
                         
                         # Formulaire d'édition dans un expander
                         if occ.get('source') == 'réservation':
@@ -437,39 +432,44 @@ def main():
 
                                         # Accompte
                                         accompte_val = occ.get('accompte', '')
-                                        if accompte_val == 'Non renseigné':
-                                            accompte_val = ''
-                                        label_accompte = "💰 Accompte (€)" if accompte_val else "💰 Accompte (€) non renseigné"
-                                        new_accompte = st.text_input(label_accompte, value=accompte_val, placeholder="Ex: 100")
+                                        if accompte_val:
+                                            new_accompte = st.text_input("💰 Accompte (€)", value=accompte_val, placeholder="Ex: 100")
+                                        else:
+                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>💰 Accompte (€) non renseigné</p>", unsafe_allow_html=True)
+                                            new_accompte = st.text_input("", value=accompte_val, placeholder="Ex: 100", label_visibility="collapsed")
 
                                         # Reste à payer
                                         reste_val = occ.get('reste_a_payer', '')
-                                        if reste_val == 'Non renseigné':
-                                            reste_val = ''
-                                        label_reste = "💳 Reste à payer (€)" if reste_val else "💳 Reste à payer (€) non renseigné"
-                                        new_reste = st.text_input(label_reste, value=reste_val, placeholder="Ex: 550")
+                                        if reste_val:
+                                            new_reste = st.text_input("💳 Reste à payer (€)", value=reste_val, placeholder="Ex: 550")
+                                        else:
+                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>💳 Reste à payer (€) non renseigné</p>", unsafe_allow_html=True)
+                                            new_reste = st.text_input("", value=reste_val, placeholder="Ex: 550", label_visibility="collapsed")
 
                                     with col2:
                                         # Prix location
                                         prix_val = occ.get('prix_location', '')
-                                        if prix_val == 'Non renseigné':
-                                            prix_val = ''
-                                        label_prix = "💵 Prix location (€)" if prix_val else "💵 Prix location (€) non renseigné"
-                                        new_prix = st.text_input(label_prix, value=prix_val, placeholder="Ex: 650")
+                                        if prix_val:
+                                            new_prix = st.text_input("💵 Prix location (€)", value=prix_val, placeholder="Ex: 650")
+                                        else:
+                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>💵 Prix location (€) non renseigné</p>", unsafe_allow_html=True)
+                                            new_prix = st.text_input("", value=prix_val, placeholder="Ex: 650", label_visibility="collapsed")
 
                                         # Caution
                                         caution_val = occ.get('caution_menage', '')
-                                        if caution_val == 'Non renseigné':
-                                            caution_val = ''
-                                        label_caution = "🧹 Caution" if caution_val else "🧹 Caution non renseigné"
-                                        new_caution = st.text_input(label_caution, value=caution_val, placeholder="Ex: Oui")
+                                        if caution_val:
+                                            new_caution = st.text_input("🧹 Caution", value=caution_val, placeholder="Ex: Oui")
+                                        else:
+                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>🧹 Caution non renseigné</p>", unsafe_allow_html=True)
+                                            new_caution = st.text_input("", value=caution_val, placeholder="Ex: Oui", label_visibility="collapsed")
 
-                                        # Salle occupation
-                                        salle_occ_val = occ.get('salle_occupation', '')
-                                        if salle_occ_val == 'Non renseigné':
-                                            salle_occ_val = ''
-                                        label_salle_occ = "🏠 Salle occupée" if salle_occ_val else "🏠 Salle occupée non renseigné"
-                                        new_salle_occ = st.text_input(label_salle_occ, value=salle_occ_val, placeholder="Ex: Salle principale")
+                                        # Salle (colonne B du planning)
+                                        salle_val = occ.get('salle', '')
+                                        if salle_val:
+                                            new_salle = st.text_input("🏠 Salle", value=salle_val, placeholder="Ex: Salle principale")
+                                        else:
+                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>🏠 Salle non renseigné</p>", unsafe_allow_html=True)
+                                            new_salle = st.text_input("", value=salle_val, placeholder="Ex: Salle principale", label_visibility="collapsed")
 
                                     # Boutons côte à côte
                                     col_save, col_clear = st.columns(2)
@@ -505,16 +505,16 @@ def main():
                                         else:
                                             update_data['caution_menage'] = ""
 
-                                        if new_salle_occ:
-                                            update_data['salle_occupation'] = new_salle_occ
+                                        if new_salle:
+                                            update_data['salle'] = new_salle
                                         else:
-                                            update_data['salle_occupation'] = ""
+                                            update_data['salle'] = ""
 
                                         if update_data:
                                             success, error = checker.update_reservation_google(
                                                 st.session_state.salle.lower(),
                                                 st.session_state.date_input,
-                                                occupant,
+                                                occupant.strip(),
                                                 update_data
                                             )
 
@@ -534,7 +534,7 @@ def main():
                                             'reste_a_payer': "",
                                             'prix_location': "",
                                             'caution_menage': "",
-                                            'salle_occupation': ""
+                                            'salle': ""
                                         }
 
                                         success, error = checker.update_reservation_google(
