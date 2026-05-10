@@ -362,23 +362,23 @@ def main():
 
                     accompte_display = occ.get('accompte', '')
                     if accompte_display:
-                        details_items.append(f'💰 <strong>Accompte (€)</strong> {accompte_display}')
+                        details_items.append(f'💰 <strong>Accompte (€):</strong> {accompte_display}')
 
                     reste_display = occ.get('reste_a_payer', '')
                     if reste_display:
-                        details_items.append(f'💳 <strong>Reste à payer (€)</strong> {reste_display}')
+                        details_items.append(f'💳 <strong>Reste à payer (€):</strong> {reste_display}')
 
                     prix_display = occ.get('prix_location', '')
                     if prix_display:
-                        details_items.append(f'💵 <strong>Prix location (€)</strong> {prix_display}')
+                        details_items.append(f'💵 <strong>Prix location (€):</strong> {prix_display}')
 
                     caution_display = occ.get('caution_menage', '')
                     if caution_display:
-                        details_items.append(f'🧹 <strong>Caution</strong> {caution_display}')
+                        details_items.append(f'🧹 <strong>Caution:</strong> {caution_display}')
 
                     salle_display = occ.get('salle', '')
                     if salle_display:
-                        details_items.append(f'🏠 <strong>Salle</strong> {salle_display}')
+                        details_items.append(f'🏠 <strong>Salle:</strong> {salle_display}')
 
                     # Joindre les éléments avec <br> s'il y en a
                     details_html = '<br>'.join(details_items) if details_items else ''
