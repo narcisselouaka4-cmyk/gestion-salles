@@ -422,127 +422,138 @@ def main():
                         card_content += '</div>'
                         st.markdown(card_content, unsafe_allow_html=True)
                         
-                        # Formulaire d'édition
+                        # Formulaire d'édition dans un expander
                         if occ.get('source') == 'réservation':
-                            st.markdown("<hr style='margin: 1.5rem 0; border: none; border-top: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-                            
-                            with st.form(key=f"edit_form_{idx}"):
-                                col1, col2 = st.columns(2)
-                                
-                                with col1:
-                                    # Nom
-                                    nom_val = occ.get('occupant', '')
-                                    new_nom = st.text_input("👤 Nom", value=nom_val)
-                                    
-                                    # Accompte
-                                    accompte_val = occ.get('accompte', '')
-                                    if accompte_val == 'Non renseigné':
-                                        accompte_val = ''
-                                    new_accompte = st.text_input("💰 Accompte (laisser vide = Non renseigné)", value=accompte_val, placeholder="Ex: 100")
-                                    
-                                    # Reste à payer
-                                    reste_val = occ.get('reste_a_payer', '')
-                                    if reste_val == 'Non renseigné':
-                                        reste_val = ''
-                                    new_reste = st.text_input("💳 Reste à payer (laisser vide = Non renseigné)", value=reste_val, placeholder="Ex: 550")
-                                
-                                with col2:
-                                    # Prix location
-                                    prix_val = occ.get('prix_location', '')
-                                    if prix_val == 'Non renseigné':
-                                        prix_val = ''
-                                    new_prix = st.text_input("💵 Prix location (laisser vide = Non renseigné)", value=prix_val, placeholder="Ex: 650")
-                                    
-                                    # Caution
-                                    caution_val = occ.get('caution_menage', '')
-                                    if caution_val == 'Non renseigné':
-                                        caution_val = ''
-                                    new_caution = st.text_input("🧹 Caution (laisser vide = Non renseigné)", value=caution_val, placeholder="Ex: Oui")
-                                    
-                                    # Salle occupation
-                                    salle_occ_val = occ.get('salle_occupation', '')
-                                    if salle_occ_val == 'Non renseigné':
-                                        salle_occ_val = ''
-                                    new_salle_occ = st.text_input("🏠 Salle occupée (laisser vide = Non renseigné)", value=salle_occ_val, placeholder="Ex: Salle principale")
-                                
-                                # Boutons côte à côte
-                                col_save, col_clear = st.columns(2)
-                                with col_save:
-                                    submitted = st.form_submit_button("💾 Sauvegarder", type="primary")
-                                
-                                with col_clear:
-                                    clear_submitted = st.form_submit_button("🗑️ Tout effacer")
-                                
-                                if submitted:
-                                    # Préparer les données - champ vide = "Non renseigné"
-                                    update_data = {}
-                                    if new_nom != occupant:
-                                        update_data['occupant'] = new_nom if new_nom else "Non renseigné"
-                                    if new_accompte:
-                                        update_data['accompte'] = f"{new_accompte}€" if '€' not in new_accompte else new_accompte
-                                    else:
-                                        update_data['accompte'] = "Non renseigné"
-                                    if new_reste:
-                                        update_data['reste_a_payer'] = f"{new_reste}€" if '€' not in new_reste else new_reste
-                                    else:
-                                        update_data['reste_a_payer'] = "Non renseigné"
-                                    if new_prix:
-                                        update_data['prix_location'] = f"{new_prix}€" if '€' not in new_prix else new_prix
-                                    else:
-                                        update_data['prix_location'] = "Non renseigné"
-                                    if new_caution:
-                                        update_data['caution_menage'] = new_caution
-                                    else:
-                                        update_data['caution_menage'] = "Non renseigné"
-                                    if new_salle_occ:
-                                        update_data['salle_occupation'] = new_salle_occ
-                                    else:
-                                        update_data['salle_occupation'] = "Non renseigné"
-                                    
-                                    if update_data:
+                            with st.expander("✏️ Modifier les informations"):
+                                st.markdown("<hr style='margin: 1.5rem 0; border: none; border-top: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
+
+                                with st.form(key=f"edit_form_{idx}"):
+                                    col1, col2 = st.columns(2)
+
+                                    with col1:
+                                        # Nom
+                                        nom_val = occ.get('occupant', '')
+                                        new_nom = st.text_input("👤 Nom", value=nom_val)
+
+                                        # Accompte
+                                        accompte_val = occ.get('accompte', '')
+                                        if accompte_val == 'Non renseigné':
+                                            accompte_val = ''
+                                        label_accompte = "💰 Accompte (€)" if accompte_val else "💰 Accompte (€) non renseigné"
+                                        new_accompte = st.text_input(label_accompte, value=accompte_val, placeholder="Ex: 100")
+
+                                        # Reste à payer
+                                        reste_val = occ.get('reste_a_payer', '')
+                                        if reste_val == 'Non renseigné':
+                                            reste_val = ''
+                                        label_reste = "💳 Reste à payer (€)" if reste_val else "💳 Reste à payer (€) non renseigné"
+                                        new_reste = st.text_input(label_reste, value=reste_val, placeholder="Ex: 550")
+
+                                    with col2:
+                                        # Prix location
+                                        prix_val = occ.get('prix_location', '')
+                                        if prix_val == 'Non renseigné':
+                                            prix_val = ''
+                                        label_prix = "💵 Prix location (€)" if prix_val else "💵 Prix location (€) non renseigné"
+                                        new_prix = st.text_input(label_prix, value=prix_val, placeholder="Ex: 650")
+
+                                        # Caution
+                                        caution_val = occ.get('caution_menage', '')
+                                        if caution_val == 'Non renseigné':
+                                            caution_val = ''
+                                        label_caution = "🧹 Caution" if caution_val else "🧹 Caution non renseigné"
+                                        new_caution = st.text_input(label_caution, value=caution_val, placeholder="Ex: Oui")
+
+                                        # Salle occupation
+                                        salle_occ_val = occ.get('salle_occupation', '')
+                                        if salle_occ_val == 'Non renseigné':
+                                            salle_occ_val = ''
+                                        label_salle_occ = "🏠 Salle occupée" if salle_occ_val else "🏠 Salle occupée non renseigné"
+                                        new_salle_occ = st.text_input(label_salle_occ, value=salle_occ_val, placeholder="Ex: Salle principale")
+
+                                    # Boutons côte à côte
+                                    col_save, col_clear = st.columns(2)
+                                    with col_save:
+                                        submitted = st.form_submit_button("💾 Sauvegarder", type="primary")
+
+                                    with col_clear:
+                                        clear_submitted = st.form_submit_button("🗑️ Tout effacer")
+
+                                    if submitted:
+                                        # Préparer les données - champ vide = "" (cellule vide dans Google Sheets)
+                                        update_data = {}
+                                        if new_nom != occupant:
+                                            update_data['occupant'] = new_nom if new_nom else "Non renseigné"
+
+                                        if new_accompte:
+                                            update_data['accompte'] = f"{new_accompte}€" if '€' not in new_accompte else new_accompte
+                                        else:
+                                            update_data['accompte'] = ""
+
+                                        if new_reste:
+                                            update_data['reste_a_payer'] = f"{new_reste}€" if '€' not in new_reste else new_reste
+                                        else:
+                                            update_data['reste_a_payer'] = ""
+
+                                        if new_prix:
+                                            update_data['prix_location'] = f"{new_prix}€" if '€' not in new_prix else new_prix
+                                        else:
+                                            update_data['prix_location'] = ""
+
+                                        if new_caution:
+                                            update_data['caution_menage'] = new_caution
+                                        else:
+                                            update_data['caution_menage'] = ""
+
+                                        if new_salle_occ:
+                                            update_data['salle_occupation'] = new_salle_occ
+                                        else:
+                                            update_data['salle_occupation'] = ""
+
+                                        if update_data:
+                                            success, error = checker.update_reservation_google(
+                                                st.session_state.salle.lower(),
+                                                st.session_state.date_input,
+                                                occupant,
+                                                update_data
+                                            )
+
+                                            if success:
+                                                st.success("✅ Modifications sauvegardées!")
+                                                st.session_state.occupations[idx].update(update_data)
+                                                st.session_state.last_update = datetime.now()
+                                                time_module.sleep(0.5)
+                                                st.rerun()
+                                            else:
+                                                st.error(f"❌ Erreur: {error}")
+
+                                    if clear_submitted:
+                                        # Remettre tout à vide (cellule vide dans Google Sheets)
+                                        update_data = {
+                                            'accompte': "",
+                                            'reste_a_payer': "",
+                                            'prix_location': "",
+                                            'caution_menage': "",
+                                            'salle_occupation': ""
+                                        }
+
                                         success, error = checker.update_reservation_google(
                                             st.session_state.salle.lower(),
                                             st.session_state.date_input,
-                                            occupant,
+                                            occupant.strip(),
                                             update_data
                                         )
-                                        
+
                                         if success:
-                                            st.success("✅ Modifications sauvegardées!")
+                                            st.success("🗑️ Informations remises à zéro!")
                                             st.session_state.occupations[idx].update(update_data)
                                             st.session_state.last_update = datetime.now()
                                             time_module.sleep(0.5)
                                             st.rerun()
                                         else:
                                             st.error(f"❌ Erreur: {error}")
-                                
-                                if clear_submitted:
-                                    # Remettre tout à "Non renseigné"
-                                    update_data = {
-                                        'accompte': "Non renseigné",
-                                        'reste_a_payer': "Non renseigné",
-                                        'prix_location': "Non renseigné",
-                                        'caution_menage': "Non renseigné",
-                                        'salle_occupation': "Non renseigné"
-                                    }
-                                    
-                                    success, error = checker.update_reservation_google(
-                                        st.session_state.salle.lower(),
-                                        st.session_state.date_input,
-                                        occupant,
-                                        update_data
-                                    )
-                                    
-                                    if success:
-                                        st.success("🗑️ Informations remises à zéro!")
-                                        st.session_state.occupations[idx].update(update_data)
-                                        st.session_state.last_update = datetime.now()
-                                        time_module.sleep(0.5)
-                                        st.rerun()
-                                    else:
-                                        st.error(f"❌ Erreur: {error}")
-                        
-                        st.markdown("<br>", unsafe_allow_html=True)
+
+                                st.markdown("<br>", unsafe_allow_html=True)
 
     # Auto-refresh toutes les 60 secondes si des résultats sont affichés
     if 'occupations' in st.session_state and st.session_state.occupations:

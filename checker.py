@@ -467,10 +467,11 @@ class SalleChecker:
             # Pas parseable mais contient du texte → warning
             return None, None, horaire_str, False, False
 
-    def _get_cell_value(self, row, index, default="Non renseigné"):
-        """Récupère la valeur d'une cellule avec une valeur par défaut."""
-        if len(row) > index and row[index]:
-            return str(row[index]).strip()
+    def _get_cell_value(self, row, index, default=""):
+        """Récupère la valeur d'une cellule. Retourne '' si vide."""
+        if len(row) > index and row[index] is not None:
+            val = str(row[index]).strip()
+            return val if val else default
         return default
 
     def check_reservations_google(self, salle_name: str, d: date, time_requested: time) -> tuple:
@@ -532,15 +533,15 @@ class SalleChecker:
 
                 # Vérifier si certaines infos financières sont manquantes
                 infos_manquantes = []
-                if accompte == "Non renseigné":
+                if not accompte:
                     infos_manquantes.append("Accompte")
-                if reste == "Non renseigné":
+                if not reste:
                     infos_manquantes.append("Reste à payer")
-                if prix_location == "Non renseigné":
+                if not prix_location:
                     infos_manquantes.append("Prix de location")
-                if caution == "Non renseigné":
+                if not caution:
                     infos_manquantes.append("Chèque caution ménage")
-                if salle_occupation == "Non renseigné":
+                if not salle_occupation:
                     infos_manquantes.append("Salle d'occupation")
 
                 # Gérer l'horaire
@@ -849,15 +850,15 @@ class SalleChecker:
 
                 # Vérifier si certaines infos financières sont manquantes
                 infos_manquantes = []
-                if accompte == "Non renseigné":
+                if not accompte:
                     infos_manquantes.append("Accompte")
-                if reste == "Non renseigné":
+                if not reste:
                     infos_manquantes.append("Reste à payer")
-                if prix_location == "Non renseigné":
+                if not prix_location:
                     infos_manquantes.append("Prix de location")
-                if caution == "Non renseigné":
+                if not caution:
                     infos_manquantes.append("Chèque caution ménage")
-                if salle_occupation == "Non renseigné":
+                if not salle_occupation:
                     infos_manquantes.append("Salle d'occupation")
 
                 debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
@@ -942,32 +943,32 @@ class SalleChecker:
                 if nom != occupant:
                     continue
 
-                # Mettre à jour les colonnes
+                # Mettre à jour les colonnes — vider d'abord les cellules vides
+                clear_ranges = []
                 updates = []
-                
-                # Colonne F (index 5): Accompte
-                if 'accompte' in new_data:
-                    updates.append({'range': f'F{row_idx}', 'values': [[new_data['accompte']]]})
-                
-                # Colonne G (index 6): Reste à payer
-                if 'reste_a_payer' in new_data:
-                    updates.append({'range': f'G{row_idx}', 'values': [[new_data['reste_a_payer']]]})
-                
-                # Colonne H (index 7): Prix de location
-                if 'prix_location' in new_data:
-                    updates.append({'range': f'H{row_idx}', 'values': [[new_data['prix_location']]]})
-                
-                # Colonne I (index 8): Caution ménage
-                if 'caution_menage' in new_data:
-                    updates.append({'range': f'I{row_idx}', 'values': [[new_data['caution_menage']]]})
-                
-                # Colonne J (index 9): Salle d'occupation
-                if 'salle_occupation' in new_data:
-                    updates.append({'range': f'J{row_idx}', 'values': [[new_data['salle_occupation']]]})
+
+                def _add_update(col_letter, key):
+                    if key in new_data:
+                        val = new_data[key]
+                        if val:
+                            updates.append({'range': f'{col_letter}{row_idx}', 'values': [[val]]})
+                        else:
+                            clear_ranges.append(f'{col_letter}{row_idx}')
+
+                _add_update('C', 'occupant')
+                _add_update('F', 'accompte')
+                _add_update('G', 'reste_a_payer')
+                _add_update('H', 'prix_location')
+                _add_update('I', 'caution_menage')
+                _add_update('J', 'salle_occupation')
+
+                if clear_ranges:
+                    worksheet.batch_clear(clear_ranges)
 
                 if updates:
                     worksheet.batch_update(updates)
-                    return True, None
+
+                return True, None
 
             return False, "Réservation non trouvée"
 
