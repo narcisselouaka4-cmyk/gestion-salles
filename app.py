@@ -325,7 +325,7 @@ st.markdown("""
         border: 1px solid #e2e8f0;
     }
 
-    /* Expander modernisé */
+    /* Expander modernisé - CORRIGÉ */
     div[data-testid="stExpander"] {
         border: 1px solid #e2e8f0 !important;
         border-radius: 16px !important;
@@ -334,11 +334,29 @@ st.markdown("""
         overflow: hidden;
     }
     
-    div[data-testid="stExpanderHeader"] {
-        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
+    /* Header expander - FOND GRIS CLAIR forcé */
+    div[data-testid="stExpander"] > div:first-child,
+    div[data-testid="stExpander"] > div > div:first-child {
+        background-color: #f8fafc !important;
+        background: #f8fafc !important;
         padding: 1rem 1.25rem !important;
         font-weight: 500 !important;
         color: #1e293b !important;
+        border: none !important;
+    }
+    
+    /* Texte dans le header expander */
+    div[data-testid="stExpander"] > div:first-child p,
+    div[data-testid="stExpander"] > div > div:first-child p {
+        color: #1e293b !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Icône flèche */
+    div[data-testid="stExpander"] > div:first-child svg,
+    div[data-testid="stExpander"] > div > div:first-child svg {
+        fill: #6366f1 !important;
+        color: #6366f1 !important;
     }
     
     div[data-testid="stExpanderDetails"] {
@@ -385,8 +403,8 @@ st.markdown("""
         transform: translateY(-1px);
     }
 
-    /* Form submit buttons */
-    button[type="submit"] {
+    /* Form submit buttons - Boutons dans les formulaires CORRIGÉS */
+    [data-testid="stForm"] button {
         border-radius: 12px !important;
         font-weight: 600 !important;
         padding: 0.75rem 1.5rem !important;
@@ -442,6 +460,71 @@ st.markdown("""
         padding-top: 2rem !important;
         padding-bottom: 2rem !important;
         max-width: 800px !important;
+    }
+
+    /* ========== CORRECTIONS STREAMLIT 1.57 ========== */
+    
+    /* EXPANDER - Header clair (forcer le fond gris clair) */
+    div[data-testid="stExpander"] > div:first-child {
+        background-color: #f1f5f9 !important;
+        color: #1e293b !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    
+    div[data-testid="stExpander"] > div:first-child * {
+        color: #1e293b !important;
+    }
+    
+    div[data-testid="stExpander"] > div:first-child svg {
+        fill: #1e293b !important;
+    }
+
+    /* BOUTON PRIMAIRE (Sauvegarder) - Violet forcé */
+    button[data-testid="baseButton-primary"],
+    button[data-testid="baseButton-primary"][class] {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+        background-color: #6366f1 !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.4) !important;
+    }
+    
+    button[data-testid="baseButton-primary"]:hover,
+    button[data-testid="baseButton-primary"][class]:hover {
+        background: linear-gradient(135deg, #5558e0 0%, #7c4fe8 100%) !important;
+        background-color: #5558e0 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px -2px rgba(99, 102, 241, 0.5) !important;
+    }
+
+    /* BOUTON SECONDAIRE (Effacer) - Gris clair forcé */
+    button[data-testid="baseButton-secondary"],
+    button[data-testid="baseButton-secondary"][class] {
+        background-color: #f1f5f9 !important;
+        color: #475569 !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+    }
+    
+    button[data-testid="baseButton-secondary"]:hover,
+    button[data-testid="baseButton-secondary"][class]:hover {
+        background-color: #e2e8f0 !important;
+        border-color: #94a3b8 !important;
+        color: #1e293b !important;
+    }
+
+    /* Forcer tous les boutons submit dans les formulaires */
+    [data-testid="stForm"] button[data-testid="baseButton-primary"] {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+        background-color: #6366f1 !important;
+        color: white !important;
+    }
+    
+    /* Correction pour Streamlit qui injecte des styles inline */
+    [data-testid="stForm"] button[data-testid="baseButton-secondary"] {
+        background-color: #f1f5f9 !important;
+        color: #475569 !important;
+        border: 1px solid #cbd5e1 !important;
     }
 </style>
 """, unsafe_allow_html=True)
