@@ -426,10 +426,9 @@ def main():
                         
                         # Formulaire d'édition
                         if occ.get('source') == 'réservation':
-                            with st.expander("✏️ Modifier les informations"):
-                                with st.form(key=f"edit_form_{idx}"):
-                                st.markdown("**✏️ Modifier les informations**")
-                                
+                            st.markdown("<hr style='margin: 1.5rem 0; border: none; border-top: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
+                            
+                            with st.form(key=f"edit_form_{idx}"):
                                 col1, col2 = st.columns(2)
                                 
                                 with col1:
