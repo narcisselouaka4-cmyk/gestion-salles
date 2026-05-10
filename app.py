@@ -426,6 +426,7 @@ def main():
                         
                         # Formulaire d'édition
                         if occ.get('source') == 'réservation':
+                            with st.expander("✏️ Modifier les informations"):
                             with st.form(key=f"edit_form_{idx}"):
                                 st.markdown("**✏️ Modifier les informations**")
                                 
