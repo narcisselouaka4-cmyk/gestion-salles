@@ -352,6 +352,125 @@ def main():
     verify_clicked = st.button("🔍 Vérifier la disponibilité", use_container_width=True, type="primary")
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+    
+    # Section modification des réservations
+    st.markdown("### ✏️ Modifier une réservation")
+    
+    # Récupérer les paramètres d'édition depuis l'URL
+    edit_mode = st.query_params.get('edit', [None])[0] if hasattr(st, 'query_params') else None
+    
+    # Créer un expander pour le formulaire d'édition
+    with st.expander("📝 Cliquez ici pour modifier une réservation", expanded=edit_mode is not None):
+        st.markdown('<div class="glass-card" style="margin-top: 1rem;">', unsafe_allow_html=True)
+        
+        # Choisir la réservation à modifier
+        edit_salle = st.selectbox(
+            "Salle concernée",
+            options=["Salle principale", "Salle du fond", "Salle du milieu"],
+            key="edit_salle"
+        )
+        
+        edit_date = st.date_input(
+            "Date de la réservation",
+            value=datetime.now().date(),
+            key="edit_date"
+        )
+        
+        edit_occupant = st.text_input(
+            "Nom du réservant",
+            placeholder="Entrez le nom exact comme dans le planning",
+            key="edit_occupant"
+        )
+        
+        if edit_occupant:
+            # Charger les données actuelles
+            checker = SalleChecker(salles_dir, GOOGLE_SHEET_ID)
+            result = checker.get_all_reservations(edit_salle.lower(), edit_date)
+            
+            if result[0]:
+                reservations = result[0]
+                # Trouver la réservation correspondante
+                res_to_edit = None
+                for res in reservations:
+                    if res['occupant'].lower() == edit_occupant.lower():
+                        res_to_edit = res
+                        break
+                
+                if res_to_edit:
+                    st.markdown("#### Informations actuelles")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        new_accompte = st.text_input(
+                            "💰 Accompte",
+                            value=res_to_edit.get('accompte', '') if res_to_edit.get('accompte') != 'Non renseigné' else '',
+                            placeholder="Ex: 100€"
+                        )
+                        
+                        new_reste = st.text_input(
+                            "💳 Reste à payer", 
+                            value=res_to_edit.get('reste_a_payer', '') if res_to_edit.get('reste_a_payer') != 'Non renseigné' else '',
+                            placeholder="Ex: 550€"
+                        )
+                    
+                    with col2:
+                        new_prix = st.text_input(
+                            "💵 Prix de location",
+                            value=res_to_edit.get('prix_location', '') if res_to_edit.get('prix_location') != 'Non renseigné' else '',
+                            placeholder="Ex: 650€"
+                        )
+                        
+                        new_caution = st.text_input(
+                            "🧹 Chèque caution ménage",
+                            value=res_to_edit.get('caution_menage', '') if res_to_edit.get('caution_menage') != 'Non renseigné' else '',
+                            placeholder="Ex: Oui / 100€"
+                        )
+                    
+                    new_salle_occ = st.text_input(
+                        "🏠 Salle d'occupation",
+                        value=res_to_edit.get('salle_occupation', '') if res_to_edit.get('salle_occupation') != 'Non renseigné' else '',
+                        placeholder="Ex: Salle principale"
+                    )
+                    
+                    if st.button("💾 Sauvegarder les modifications", type="primary"):
+                        # Préparer les données à mettre à jour
+                        update_data = {}
+                        if new_accompte:
+                            update_data['accompte'] = new_accompte
+                        if new_reste:
+                            update_data['reste_a_payer'] = new_reste
+                        if new_prix:
+                            update_data['prix_location'] = new_prix
+                        if new_caution:
+                            update_data['caution_menage'] = new_caution
+                        if new_salle_occ:
+                            update_data['salle_occupation'] = new_salle_occ
+                        
+                        if update_data:
+                            success, error = checker.update_reservation_google(
+                                edit_salle.lower(),
+                                edit_date,
+                                res_to_edit['occupant'],
+                                update_data
+                            )
+                            
+                            if success:
+                                st.success("✅ Modifications sauvegardées avec succès!")
+                                st.balloons()
+                                st.info("🔄 Rafraîchissez la page pour voir les changements.")
+                            else:
+                                st.error(f"❌ Erreur lors de la sauvegarde: {error}")
+                        else:
+                            st.warning("⚠️ Aucune modification détectée.")
+                else:
+                    st.warning("⚠️ Aucune réservation trouvée avec ce nom pour cette date.")
+            else:
+                st.info("ℹ️ Aucune réservation trouvée pour cette date.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
     # Zone de résultat
     if verify_clicked:
@@ -403,6 +522,20 @@ def main():
                             warning = ""
                             if "warning" in occ:
                                 warning = f'<div style="background: rgba(251, 191, 36, 0.2); border-left: 3px solid #f59e0b; padding: 0.5rem; margin-top: 0.75rem; border-radius: 4px; font-size: 0.85rem; color: #d97706;">⚠️ {occ["warning"]}</div>'
+                            
+                            # Bouton modifier si c'est une réservation avec infos manquantes
+                            edit_button = ""
+                            if occ.get('source') == 'réservation':
+                                has_missing = any([
+                                    occ.get('accompte') == 'Non renseigné',
+                                    occ.get('reste_a_payer') == 'Non renseigné', 
+                                    occ.get('prix_location') == 'Non renseigné',
+                                    occ.get('caution_menage') == 'Non renseigné',
+                                    occ.get('salle_occupation') == 'Non renseigné'
+                                ])
+                                if has_missing:
+                                    occupant_key = occ['occupant'].replace(' ', '_')
+                                    edit_button = f'<button onclick="window.location.href=\'?edit={occupant_key}_{date_input}\'" style="margin-top: 0.75rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">✏️ Modifier les informations</button>'
 
                             st.markdown(f'''
                             <div class="occupation-card">
@@ -411,6 +544,7 @@ def main():
                                 {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
                                 {details_html}
                                 {warning}
+                                {edit_button}
                             </div>
                             ''', unsafe_allow_html=True)
 

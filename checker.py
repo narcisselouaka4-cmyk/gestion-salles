@@ -894,6 +894,86 @@ class SalleChecker:
 
         return results, None
 
+    def update_reservation_google(self, salle_name: str, d: date, occupant: str, 
+                                   new_data: dict) -> tuple:
+        """
+        Met à jour une réservation dans Google Sheets.
+        Retourne (success, error) où error est None si succès.
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Planning quotidien")
+            except gspread.exceptions.WorksheetNotFound:
+                worksheet = spreadsheet.get_worksheet(0)
+
+            all_values = worksheet.get_all_values()
+
+            # Chercher la ligne correspondante
+            for row_idx, row in enumerate(all_values[5:], start=6):
+                if len(row) < 5:
+                    continue
+
+                salle_cell = row[1] if len(row) > 1 else None
+                nom_cell = row[2] if len(row) > 2 else None
+                date_cell = row[4] if len(row) > 4 else None
+
+                if not salle_cell or not nom_cell or not date_cell:
+                    continue
+
+                # Vérifier la correspondance
+                if not salle_matches(str(salle_cell).lower().strip(), salle_name):
+                    continue
+
+                dates = self._parse_date_from_sheet(date_cell)
+                if d not in dates:
+                    continue
+
+                nom = str(nom_cell).strip() if nom_cell else ""
+                if nom != occupant:
+                    continue
+
+                # Mettre à jour les colonnes
+                updates = []
+                
+                # Colonne F (index 5): Accompte
+                if 'accompte' in new_data:
+                    updates.append({'range': f'F{row_idx}', 'values': [[new_data['accompte']]]})
+                
+                # Colonne G (index 6): Reste à payer
+                if 'reste_a_payer' in new_data:
+                    updates.append({'range': f'G{row_idx}', 'values': [[new_data['reste_a_payer']]]})
+                
+                # Colonne H (index 7): Prix de location
+                if 'prix_location' in new_data:
+                    updates.append({'range': f'H{row_idx}', 'values': [[new_data['prix_location']]]})
+                
+                # Colonne I (index 8): Caution ménage
+                if 'caution_menage' in new_data:
+                    updates.append({'range': f'I{row_idx}', 'values': [[new_data['caution_menage']]]})
+                
+                # Colonne J (index 9): Salle d'occupation
+                if 'salle_occupation' in new_data:
+                    updates.append({'range': f'J{row_idx}', 'values': [[new_data['salle_occupation']]]})
+
+                if updates:
+                    worksheet.batch_update(updates)
+                    return True, None
+
+            return False, "Réservation non trouvée"
+
+        except Exception as e:
+            return False, f"Erreur mise à jour Google Sheets: {str(e)}"
+
     def get_all_reservations(self, salle_name: str, d: date) -> tuple:
         """
         Récupère TOUTES les réservations ponctuelles d'une journée (sans filtrer par heure).
