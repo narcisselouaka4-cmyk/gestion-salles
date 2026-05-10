@@ -238,16 +238,6 @@ def format_date_fr(d):
     return f"{jour} {d.day} {mois_fr[d.month]}"
 
 
-def format_montant(valeur):
-    """Formate un montant en ajoutant € si pas déjà présent."""
-    if valeur == 'Non renseigné':
-        return valeur
-    valeur_str = str(valeur).strip()
-    if '€' in valeur_str:
-        return valeur_str
-    return f"{valeur_str}€"
-
-
 def main():
     # Header Moderne avec Gradient
     st.markdown('''
@@ -272,6 +262,9 @@ def main():
     if not os.path.exists(salles_dir):
         st.error("❌ Dossier 'salles/' introuvable. Vérifiez l'installation.")
         return
+
+    # Initialiser le checker
+    checker = SalleChecker(salles_dir, GOOGLE_SHEET_ID)
 
     # Formulaire dans une card
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -312,278 +305,167 @@ def main():
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
     # Zone de résultat
-    if verify_clicked:
-        with st.spinner("Analyse en cours..."):
-            try:
-                checker = SalleChecker(salles_dir, GOOGLE_SHEET_ID)
-
-                if sans_heure:
-                    result = checker.get_all_occupations(salle.lower(), date_input)
-                    occupations = result["occupations"]
-
+    if verify_clicked or 'occupations' in st.session_state:
+        
+        if verify_clicked:
+            # Recharger les données
+            with st.spinner("Analyse en cours..."):
+                try:
+                    if sans_heure:
+                        result = checker.get_all_occupations(salle.lower(), date_input)
+                    else:
+                        result = checker.check_availability(salle.lower(), date_input, heure)
+                    
+                    st.session_state.occupations = result.get("occupations", [])
+                    st.session_state.is_libre = result.get("libre", False)
+                    st.session_state.result_date = result.get("date", date_input)
+                    st.session_state.result_heure = result.get("heure", heure)
+                    st.session_state.salle = salle
+                    st.session_state.date_input = date_input
+                    
                     if "error" in result:
                         st.warning(f"⚠️ Connexion Google Sheets impossible. Les réservations ponctuelles ne sont pas affichées.")
-
-                    if not occupations:
-                        st.markdown(f'''
-                        <div class="result-libre">
-                            <h3>✅ La {salle.lower()} est libre</h3>
-                            <p style="font-size: 1.1rem; margin-top: 1rem;">
-                                Le <strong>{format_date_fr(result["date"])}</strong><br>
-                                <span style="font-size: 0.95rem; opacity: 0.9;">Aucune occupation prévue ce jour</span>
-                            </p>
-                        </div>
-                        ''', unsafe_allow_html=True)
-                    else:
-                        st.markdown(f'''
-                        <div class="result-occupe">
-                            <h3>🔴 La {salle.lower()} a des occupations</h3>
-                            <p style="font-size: 1.1rem; margin-top: 1rem;">
-                                Le <strong>{format_date_fr(result["date"])}</strong>
-                            </p>
-                            <p style="font-size: 1.1rem; font-weight: bold;">{len(occupations)} occupation(s) ce jour</p>
-                        </div>
-                        ''', unsafe_allow_html=True)
-
-                        st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
-                        st.markdown("### 📋 Créneaux occupés")
-
-                        for idx, occ in enumerate(occupations):
-                            horaire_display = occ["horaire"]
-                            occupant = occ["occupant"] if occ["occupant"] else "Non précisé"
-                            activite = occ["activite"] if occ["activite"] and occ["activite"] != "Non précisée" else ""
-                            
-                            # Créer un identifiant unique pour cette occupation
-                            occ_id = f"{occupant}_{idx}".replace(" ", "_")
-                            
-                            # Afficher la carte
-                            st.markdown(f'''
-                            <div class="occupation-card">
-                                <div class="time-display">🕐 {horaire_display}</div>
-                                <div class="occupant-name">👤 <strong>{occupant}</strong></div>
-                                {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
-                            </div>
-                            ''', unsafe_allow_html=True)
-                            
-                            # Section édition pour les réservations
-                            if occ.get('source') == 'réservation':
-                                with st.expander("✏️ Modifier les informations"):
-                                    col1, col2 = st.columns(2)
-                                    
-                                    with col1:
-                                        # Accompte
-                                        accompte_val = occ.get('accompte', 'Non renseigné')
-                                        if accompte_val == 'Non renseigné':
-                                            st.markdown('💰 **Accompte:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_accompte = st.text_input("", placeholder="Ex: 100", key=f"accompte_{occ_id}")
-                                        else:
-                                            st.markdown(f'💰 **Accompte:** {format_montant(accompte_val)}', unsafe_allow_html=True)
-                                            new_accompte = st.text_input("Modifier", value=str(accompte_val).replace('€', ''), key=f"accompte_{occ_id}")
-                                        
-                                        # Reste à payer
-                                        reste_val = occ.get('reste_a_payer', 'Non renseigné')
-                                        if reste_val == 'Non renseigné':
-                                            st.markdown('💳 **Reste à payer:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_reste = st.text_input("", placeholder="Ex: 550", key=f"reste_{occ_id}")
-                                        else:
-                                            st.markdown(f'💳 **Reste à payer:** {format_montant(reste_val)}', unsafe_allow_html=True)
-                                            new_reste = st.text_input("Modifier", value=str(reste_val).replace('€', ''), key=f"reste_{occ_id}")
-                                        
-                                        # Prix de location
-                                        prix_val = occ.get('prix_location', 'Non renseigné')
-                                        if prix_val == 'Non renseigné':
-                                            st.markdown('💵 **Prix de location:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_prix = st.text_input("", placeholder="Ex: 650", key=f"prix_{occ_id}")
-                                        else:
-                                            st.markdown(f'💵 **Prix de location:** {format_montant(prix_val)}', unsafe_allow_html=True)
-                                            new_prix = st.text_input("Modifier", value=str(prix_val).replace('€', ''), key=f"prix_{occ_id}")
-                                    
-                                    with col2:
-                                        # Caution ménage
-                                        caution_val = occ.get('caution_menage', 'Non renseigné')
-                                        if caution_val == 'Non renseigné':
-                                            st.markdown('🧹 **Chèque caution:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_caution = st.text_input("", placeholder="Ex: Oui / 100", key=f"caution_{occ_id}")
-                                        else:
-                                            st.markdown(f'🧹 **Chèque caution:** {caution_val}', unsafe_allow_html=True)
-                                            new_caution = st.text_input("Modifier", value=str(caution_val), key=f"caution_{occ_id}")
-                                        
-                                        # Salle d'occupation
-                                        salle_occ_val = occ.get('salle_occupation', 'Non renseigné')
-                                        if salle_occ_val == 'Non renseigné':
-                                            st.markdown('🏠 **Salle:** \u003cspan style="color: #dc2626;"\u003eNon renseignée\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_salle_occ = st.text_input("", placeholder="Ex: Salle principale", key=f"salleocc_{occ_id}")
-                                        else:
-                                            st.markdown(f'🏠 **Salle:** {salle_occ_val}', unsafe_allow_html=True)
-                                            new_salle_occ = st.text_input("Modifier", value=str(salle_occ_val), key=f"salleocc_{occ_id}")
-                                    
-                                    # Bouton sauvegarder
-                                    if st.button("💾 Sauvegarder", key=f"save_{occ_id}", type="primary"):
-                                        # Préparer les données à mettre à jour
-                                        update_data = {}
-                                        if new_accompte:
-                                            update_data['accompte'] = new_accompte if '€' in new_accompte else f"{new_accompte}€"
-                                        if new_reste:
-                                            update_data['reste_a_payer'] = new_reste if '€' in new_reste else f"{new_reste}€"
-                                        if new_prix:
-                                            update_data['prix_location'] = new_prix if '€' in new_prix else f"{new_prix}€"
-                                        if new_caution:
-                                            update_data['caution_menage'] = new_caution
-                                        if new_salle_occ:
-                                            update_data['salle_occupation'] = new_salle_occ
-                                        
-                                        if update_data:
-                                            success, error = checker.update_reservation_google(
-                                                salle.lower(),
-                                                date_input,
-                                                occ['occupant'],
-                                                update_data
-                                            )
-                                            
-                                            if success:
-                                                st.success("✅ Modifications sauvegardées!")
-                                                st.balloons()
-                                                st.rerun()
-                                            else:
-                                                st.error(f"❌ Erreur: {error}")
-                                        else:
-                                            st.info("ℹ️ Aucune modification détectée")
-
+                        
+                except Exception as e:
+                    st.error(f"❌ Erreur lors de la vérification : {str(e)}")
+                    st.session_state.occupations = []
+        
+        # Afficher les résultats
+        if 'occupations' in st.session_state:
+            occupations = st.session_state.occupations
+            is_libre = st.session_state.get("is_libre", False)
+            result_date = st.session_state.get("result_date", date_input)
+            result_heure = st.session_state.get("result_heure", heure)
+            
+            if not occupations:
+                st.markdown(f'''
+                <div class="result-libre">
+                    <h3>✅ La {salle.lower()} est libre</h3>
+                    <p style="font-size: 1.1rem; margin-top: 1rem;">
+                        Le <strong>{format_date_fr(result_date)}</strong><br>
+                        <span style="font-size: 0.95rem; opacity: 0.9;">Aucune occupation prévue</span>
+                    </p>
+                </div>
+                ''', unsafe_allow_html=True)
+            else:
+                if is_libre:
+                    st.markdown(f'''
+                    <div class="result-libre">
+                        <h3>✅ La {salle.lower()} est libre</h3>
+                        <p style="font-size: 1.1rem; margin-top: 1rem;">
+                            Le <strong>{format_date_fr(result_date)}</strong> à <strong>{result_heure.strftime("%Hh%M")}</strong>
+                        </p>
+                    </div>
+                    ''', unsafe_allow_html=True)
                 else:
-                    result = checker.check_availability(salle.lower(), date_input, heure)
+                    st.markdown(f'''
+                    <div class="result-occupe">
+                        <h3>🔴 Occupation trouvée</h3>
+                        <p style="font-size: 1.1rem; margin-top: 1rem;">
+                            {len(occupations)} résultat(s) pour cette recherche
+                        </p>
+                    </div>
+                    ''', unsafe_allow_html=True)
 
-                    if "error" in result:
-                        st.warning(f"⚠️ Connexion Google Sheets impossible. Les réservations ponctuelles ne sont pas affichées.")
+                st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
+                st.markdown("### 📋 Détails des occupations")
 
-                    if result["libre"]:
+                # Afficher chaque occupation avec formulaire d'édition si c'est une réservation
+                for idx, occ in enumerate(occupations):
+                    horaire_display = occ.get("horaire", "Horaire non précisé")
+                    occupant = occ.get("occupant", "Non précisé")
+                    activite = occ.get("activite", "")
+                    
+                    with st.container():
                         st.markdown(f'''
-                        <div class="result-libre">
-                            <h3>✅ La {salle.lower()} est libre</h3>
-                            <p style="font-size: 1.1rem; margin-top: 1rem;">
-                                Le <strong>{format_date_fr(result["date"])}</strong> à <strong>{result["heure"].strftime("%Hh%M")}</strong>
-                            </p>
+                        <div class="occupation-card">
+                            <div class="time-display">🕐 {horaire_display}</div>
+                            <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
+                            {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
                         </div>
                         ''', unsafe_allow_html=True)
-                    else:
-                        occupations = result["occupations"]
-
-                        st.markdown(f'''
-                        <div class="result-occupe">
-                            <h3>🔴 La {salle.lower()} est occupée</h3>
-                            <p style="font-size: 1.1rem; margin-top: 1rem;">
-                                Le <strong>{format_date_fr(result["date"])}</strong> à <strong>{result["heure"].strftime("%Hh%M")}</strong>
-                            </p>
-                            <p style="font-size: 1.1rem; font-weight: bold;">{len(occupations)} occupation(s) trouvée(s)</p>
-                        </div>
-                        ''', unsafe_allow_html=True)
-
-                        st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
-                        st.markdown("### 📋 Détails des occupations")
-
-                        for idx, occ in enumerate(occupations):
-                            horaire_display = occ["horaire"]
-                            occupant = occ["occupant"] if occ["occupant"] else "Non précisé"
-                            activite = occ["activite"] if occ["activite"] and occ["activite"] != "Non précisée" else ""
-                            
-                            # Créer un identifiant unique pour cette occupation
-                            occ_id = f"{occupant}_{idx}".replace(" ", "_")
-                            
-                            # Afficher la carte
-                            st.markdown(f'''
-                            <div class="occupation-card">
-                                <div class="time-display">🕐 {horaire_display}</div>
-                                <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
-                                {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
-                            </div>
-                            ''', unsafe_allow_html=True)
-                            
-                            # Section édition pour les réservations
-                            if occ.get('source') == 'réservation':
-                                with st.expander("✏️ Modifier les informations"):
-                                    col1, col2 = st.columns(2)
+                        
+                        # Si c'est une réservation Google Sheets, afficher les champs modifiables
+                        if occ.get('source') == 'réservation':
+                            # Créer un formulaire pour cette réservation
+                            with st.form(key=f"edit_form_{idx}"):
+                                st.markdown("**Modifier les informations**")
+                                
+                                col1, col2 = st.columns(2)
+                                
+                                with col1:
+                                    # Nom
+                                    nom_val = occ.get('occupant', '')
+                                    new_nom = st.text_input("👤 Nom", value=nom_val, key=f"nom_{idx}")
                                     
-                                    with col1:
-                                        # Accompte
-                                        accompte_val = occ.get('accompte', 'Non renseigné')
-                                        if accompte_val == 'Non renseigné':
-                                            st.markdown('💰 **Accompte:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_accompte = st.text_input("", placeholder="Ex: 100", key=f"accompte_{occ_id}")
-                                        else:
-                                            st.markdown(f'💰 **Accompte:** {format_montant(accompte_val)}', unsafe_allow_html=True)
-                                            new_accompte = st.text_input("Modifier", value=str(accompte_val).replace('€', ''), key=f"accompte_{occ_id}")
-                                        
-                                        # Reste à payer
-                                        reste_val = occ.get('reste_a_payer', 'Non renseigné')
-                                        if reste_val == 'Non renseigné':
-                                            st.markdown('💳 **Reste à payer:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_reste = st.text_input("", placeholder="Ex: 550", key=f"reste_{occ_id}")
-                                        else:
-                                            st.markdown(f'💳 **Reste à payer:** {format_montant(reste_val)}', unsafe_allow_html=True)
-                                            new_reste = st.text_input("Modifier", value=str(reste_val).replace('€', ''), key=f"reste_{occ_id}")
-                                        
-                                        # Prix de location
-                                        prix_val = occ.get('prix_location', 'Non renseigné')
-                                        if prix_val == 'Non renseigné':
-                                            st.markdown('💵 **Prix de location:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_prix = st.text_input("", placeholder="Ex: 650", key=f"prix_{occ_id}")
-                                        else:
-                                            st.markdown(f'💵 **Prix de location:** {format_montant(prix_val)}', unsafe_allow_html=True)
-                                            new_prix = st.text_input("Modifier", value=str(prix_val).replace('€', ''), key=f"prix_{occ_id}")
+                                    # Accompte
+                                    accompte_val = occ.get('accompte', '')
+                                    if accompte_val == 'Non renseigné':
+                                        accompte_val = ''
+                                    new_accompte = st.text_input("💰 Accompte (€)", value=accompte_val, placeholder="Ex: 100")
                                     
-                                    with col2:
-                                        # Caution ménage
-                                        caution_val = occ.get('caution_menage', 'Non renseigné')
-                                        if caution_val == 'Non renseigné':
-                                            st.markdown('🧹 **Chèque caution:** \u003cspan style="color: #dc2626;"\u003eNon renseigné\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_caution = st.text_input("", placeholder="Ex: Oui / 100", key=f"caution_{occ_id}")
-                                        else:
-                                            st.markdown(f'🧹 **Chèque caution:** {caution_val}', unsafe_allow_html=True)
-                                            new_caution = st.text_input("Modifier", value=str(caution_val), key=f"caution_{occ_id}")
-                                        
-                                        # Salle d'occupation
-                                        salle_occ_val = occ.get('salle_occupation', 'Non renseigné')
-                                        if salle_occ_val == 'Non renseigné':
-                                            st.markdown('🏠 **Salle:** \u003cspan style="color: #dc2626;"\u003eNon renseignée\u003c/span\u003e', unsafe_allow_html=True)
-                                            new_salle_occ = st.text_input("", placeholder="Ex: Salle principale", key=f"salleocc_{occ_id}")
-                                        else:
-                                            st.markdown(f'🏠 **Salle:** {salle_occ_val}', unsafe_allow_html=True)
-                                            new_salle_occ = st.text_input("Modifier", value=str(salle_occ_val), key=f"salleocc_{occ_id}")
+                                    # Reste à payer
+                                    reste_val = occ.get('reste_a_payer', '')
+                                    if reste_val == 'Non renseigné':
+                                        reste_val = ''
+                                    new_reste = st.text_input("💳 Reste à payer (€)", value=reste_val, placeholder="Ex: 550")
+                                
+                                with col2:
+                                    # Prix location
+                                    prix_val = occ.get('prix_location', '')
+                                    if prix_val == 'Non renseigné':
+                                        prix_val = ''
+                                    new_prix = st.text_input("💵 Prix location (€)", value=prix_val, placeholder="Ex: 650")
                                     
-                                    # Bouton sauvegarder
-                                    if st.button("💾 Sauvegarder", key=f"save_{occ_id}", type="primary"):
-                                        # Préparer les données à mettre à jour
-                                        update_data = {}
-                                        if new_accompte:
-                                            update_data['accompte'] = new_accompte if '€' in new_accompte else f"{new_accompte}€"
-                                        if new_reste:
-                                            update_data['reste_a_payer'] = new_reste if '€' in new_reste else f"{new_reste}€"
-                                        if new_prix:
-                                            update_data['prix_location'] = new_prix if '€' in new_prix else f"{new_prix}€"
-                                        if new_caution:
-                                            update_data['caution_menage'] = new_caution
-                                        if new_salle_occ:
-                                            update_data['salle_occupation'] = new_salle_occ
+                                    # Caution
+                                    caution_val = occ.get('caution_menage', '')
+                                    if caution_val == 'Non renseigné':
+                                        caution_val = ''
+                                    new_caution = st.text_input("🧹 Caution ménage", value=caution_val, placeholder="Ex: Oui")
+                                    
+                                    # Salle occupation
+                                    salle_occ_val = occ.get('salle_occupation', '')
+                                    if salle_occ_val == 'Non renseigné':
+                                        salle_occ_val = ''
+                                    new_salle_occ = st.text_input("🏠 Salle occupée", value=salle_occ_val, placeholder="Ex: Salle principale")
+                                
+                                # Bouton sauvegarder dans le formulaire
+                                submitted = st.form_submit_button("💾 Sauvegarder les modifications", type="primary")
+                                
+                                if submitted:
+                                    # Préparer les données
+                                    update_data = {}
+                                    if new_nom != occupant:
+                                        update_data['occupant'] = new_nom
+                                    if new_accompte:
+                                        update_data['accompte'] = f"{new_accompte}€" if '€' not in new_accompte else new_accompte
+                                    if new_reste:
+                                        update_data['reste_a_payer'] = f"{new_reste}€" if '€' not in new_reste else new_reste
+                                    if new_prix:
+                                        update_data['prix_location'] = f"{new_prix}€" if '€' not in new_prix else new_prix
+                                    if new_caution:
+                                        update_data['caution_menage'] = new_caution
+                                    if new_salle_occ:
+                                        update_data['salle_occupation'] = new_salle_occ
+                                    
+                                    if update_data:
+                                        success, error = checker.update_reservation_google(
+                                            st.session_state.salle.lower(),
+                                            st.session_state.date_input,
+                                            occupant,
+                                            update_data
+                                        )
                                         
-                                        if update_data:
-                                            success, error = checker.update_reservation_google(
-                                                salle.lower(),
-                                                date_input,
-                                                occ['occupant'],
-                                                update_data
-                                            )
-                                            
-                                            if success:
-                                                st.success("✅ Modifications sauvegardées!")
-                                                st.balloons()
-                                                st.rerun()
-                                            else:
-                                                st.error(f"❌ Erreur: {error}")
+                                        if success:
+                                            st.success("✅ Modifications sauvegardées!")
+                                            # Mettre à jour les données sans refresh complet
+                                            st.session_state.occupations[idx].update(update_data)
                                         else:
-                                            st.info("ℹ️ Aucune modification détectée")
-
-            except Exception as e:
-                st.error(f"❌ Erreur lors de la vérification : {str(e)}")
-                st.info("Vérifiez que les fichiers Excel sont présents dans le dossier 'salles/'")
+                                            st.error(f"❌ Erreur: {error}")
+                                    else:
+                                        st.info("ℹ️ Aucune modification détectée")
+                        
+                        st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
     st.markdown(
