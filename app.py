@@ -380,33 +380,33 @@ def main():
                     # Préparer les infos financières pour affichage
                     accompte_display = occ.get('accompte', '')
                     if not accompte_display or accompte_display == 'Non renseigné':
-                        accompte_html = '💰 <strong>Accompte:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                        accompte_html = '💰 <strong>Accompte (€)</strong> <span style="color: #dc2626;">Non renseigné</span>'
                     else:
-                        accompte_html = f'💰 <strong>Accompte:</strong> {accompte_display}'
+                        accompte_html = f'💰 <strong>Accompte (€)</strong> {accompte_display}'
                     
                     reste_display = occ.get('reste_a_payer', '')
                     if not reste_display or reste_display == 'Non renseigné':
-                        reste_html = '💳 <strong>Reste à payer:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                        reste_html = '💳 <strong>Reste à payer (€)</strong> <span style="color: #dc2626;">Non renseigné</span>'
                     else:
-                        reste_html = f'💳 <strong>Reste à payer:</strong> {reste_display}'
+                        reste_html = f'💳 <strong>Reste à payer (€)</strong> {reste_display}'
                     
                     prix_display = occ.get('prix_location', '')
                     if not prix_display or prix_display == 'Non renseigné':
-                        prix_html = '💵 <strong>Prix location:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                        prix_html = '💵 <strong>Prix location (€)</strong> <span style="color: #dc2626;">Non renseigné</span>'
                     else:
-                        prix_html = f'💵 <strong>Prix location:</strong> {prix_display}'
+                        prix_html = f'💵 <strong>Prix location (€)</strong> {prix_display}'
                     
                     caution_display = occ.get('caution_menage', '')
                     if not caution_display or caution_display == 'Non renseigné':
-                        caution_html = '🧹 <strong>Caution:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                        caution_html = '🧹 <strong>Caution</strong> <span style="color: #dc2626;">Non renseigné</span>'
                     else:
-                        caution_html = f'🧹 <strong>Caution:</strong> {caution_display}'
+                        caution_html = f'🧹 <strong>Caution</strong> {caution_display}'
                     
                     salle_occ_display = occ.get('salle_occupation', '')
                     if not salle_occ_display or salle_occ_display == 'Non renseigné':
-                        salle_html = '🏠 <strong>Salle:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                        salle_html = '🏠 <strong>Salle</strong> <span style="color: #dc2626;">Non renseigné</span>'
                     else:
-                        salle_html = f'🏠 <strong>Salle:</strong> {salle_occ_display}'
+                        salle_html = f'🏠 <strong>Salle</strong> {salle_occ_display}'
                     
                     with st.container():
                         st.markdown(f'''
@@ -474,7 +474,7 @@ def main():
                                     submitted = st.form_submit_button("💾 Sauvegarder", type="primary")
                                 
                                 with col_clear:
-                                    clear_submitted = st.form_submit_button("🗑️ Remettre à zéro")
+                                    clear_submitted = st.form_submit_button("🗑️ Tout effacer")
                                 
                                 if submitted:
                                     # Préparer les données - champ vide = "Non renseigné"
