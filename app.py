@@ -6,6 +6,7 @@ Application Streamlit pour la vérification de disponibilité des salles.
 import streamlit as st
 from datetime import datetime, time
 import os
+import time as time_module
 
 # Charger les variables d'environnement locales (optionnel)
 try:
@@ -376,77 +377,129 @@ def main():
                     occupant = occ.get("occupant", "Non précisé")
                     activite = occ.get("activite", "")
                     
+                    # Préparer les infos financières pour affichage
+                    accompte_display = occ.get('accompte', '')
+                    if not accompte_display or accompte_display == 'Non renseigné':
+                        accompte_html = '💰 <strong>Accompte:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                    else:
+                        accompte_html = f'💰 <strong>Accompte:</strong> {accompte_display}'
+                    
+                    reste_display = occ.get('reste_a_payer', '')
+                    if not reste_display or reste_display == 'Non renseigné':
+                        reste_html = '💳 <strong>Reste à payer:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                    else:
+                        reste_html = f'💳 <strong>Reste à payer:</strong> {reste_display}'
+                    
+                    prix_display = occ.get('prix_location', '')
+                    if not prix_display or prix_display == 'Non renseigné':
+                        prix_html = '💵 <strong>Prix location:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                    else:
+                        prix_html = f'💵 <strong>Prix location:</strong> {prix_display}'
+                    
+                    caution_display = occ.get('caution_menage', '')
+                    if not caution_display or caution_display == 'Non renseigné':
+                        caution_html = '🧹 <strong>Caution:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                    else:
+                        caution_html = f'🧹 <strong>Caution:</strong> {caution_display}'
+                    
+                    salle_occ_display = occ.get('salle_occupation', '')
+                    if not salle_occ_display or salle_occ_display == 'Non renseigné':
+                        salle_html = '🏠 <strong>Salle:</strong> <span style="color: #dc2626;">Non renseigné</span>'
+                    else:
+                        salle_html = f'🏠 <strong>Salle:</strong> {salle_occ_display}'
+                    
                     with st.container():
                         st.markdown(f'''
                         <div class="occupation-card">
                             <div class="time-display">🕐 {horaire_display}</div>
                             <div class="occupant-name">👤 Par : <strong>{occupant}</strong></div>
                             {f'<div class="activity-name">📝 {activite}</div>' if activite else ''}
+                            <div class="reservation-details">
+                                {accompte_html}<br>
+                                {reste_html}<br>
+                                {prix_html}<br>
+                                {caution_html}<br>
+                                {salle_html}
+                            </div>
                         </div>
                         ''', unsafe_allow_html=True)
                         
-                        # Si c'est une réservation Google Sheets, afficher les champs modifiables
+                        # Formulaire d'édition
                         if occ.get('source') == 'réservation':
-                            # Créer un formulaire pour cette réservation
                             with st.form(key=f"edit_form_{idx}"):
-                                st.markdown("**Modifier les informations**")
+                                st.markdown("**✏️ Modifier les informations**")
                                 
                                 col1, col2 = st.columns(2)
                                 
                                 with col1:
                                     # Nom
                                     nom_val = occ.get('occupant', '')
-                                    new_nom = st.text_input("👤 Nom", value=nom_val, key=f"nom_{idx}")
+                                    new_nom = st.text_input("👤 Nom", value=nom_val)
                                     
                                     # Accompte
                                     accompte_val = occ.get('accompte', '')
                                     if accompte_val == 'Non renseigné':
                                         accompte_val = ''
-                                    new_accompte = st.text_input("💰 Accompte (€)", value=accompte_val, placeholder="Ex: 100")
+                                    new_accompte = st.text_input("💰 Accompte (laisser vide = Non renseigné)", value=accompte_val, placeholder="Ex: 100")
                                     
                                     # Reste à payer
                                     reste_val = occ.get('reste_a_payer', '')
                                     if reste_val == 'Non renseigné':
                                         reste_val = ''
-                                    new_reste = st.text_input("💳 Reste à payer (€)", value=reste_val, placeholder="Ex: 550")
+                                    new_reste = st.text_input("💳 Reste à payer (laisser vide = Non renseigné)", value=reste_val, placeholder="Ex: 550")
                                 
                                 with col2:
                                     # Prix location
                                     prix_val = occ.get('prix_location', '')
                                     if prix_val == 'Non renseigné':
                                         prix_val = ''
-                                    new_prix = st.text_input("💵 Prix location (€)", value=prix_val, placeholder="Ex: 650")
+                                    new_prix = st.text_input("💵 Prix location (laisser vide = Non renseigné)", value=prix_val, placeholder="Ex: 650")
                                     
                                     # Caution
                                     caution_val = occ.get('caution_menage', '')
                                     if caution_val == 'Non renseigné':
                                         caution_val = ''
-                                    new_caution = st.text_input("🧹 Caution ménage", value=caution_val, placeholder="Ex: Oui")
+                                    new_caution = st.text_input("🧹 Caution (laisser vide = Non renseigné)", value=caution_val, placeholder="Ex: Oui")
                                     
                                     # Salle occupation
                                     salle_occ_val = occ.get('salle_occupation', '')
                                     if salle_occ_val == 'Non renseigné':
                                         salle_occ_val = ''
-                                    new_salle_occ = st.text_input("🏠 Salle occupée", value=salle_occ_val, placeholder="Ex: Salle principale")
+                                    new_salle_occ = st.text_input("🏠 Salle occupée (laisser vide = Non renseigné)", value=salle_occ_val, placeholder="Ex: Salle principale")
                                 
-                                # Bouton sauvegarder dans le formulaire
-                                submitted = st.form_submit_button("💾 Sauvegarder les modifications", type="primary")
+                                # Boutons côte à côte
+                                col_save, col_clear = st.columns(2)
+                                with col_save:
+                                    submitted = st.form_submit_button("💾 Sauvegarder", type="primary")
+                                
+                                with col_clear:
+                                    clear_submitted = st.form_submit_button("🗑️ Remettre à zéro")
                                 
                                 if submitted:
-                                    # Préparer les données
+                                    # Préparer les données - champ vide = "Non renseigné"
                                     update_data = {}
                                     if new_nom != occupant:
-                                        update_data['occupant'] = new_nom
+                                        update_data['occupant'] = new_nom if new_nom else "Non renseigné"
                                     if new_accompte:
                                         update_data['accompte'] = f"{new_accompte}€" if '€' not in new_accompte else new_accompte
+                                    else:
+                                        update_data['accompte'] = "Non renseigné"
                                     if new_reste:
                                         update_data['reste_a_payer'] = f"{new_reste}€" if '€' not in new_reste else new_reste
+                                    else:
+                                        update_data['reste_a_payer'] = "Non renseigné"
                                     if new_prix:
                                         update_data['prix_location'] = f"{new_prix}€" if '€' not in new_prix else new_prix
+                                    else:
+                                        update_data['prix_location'] = "Non renseigné"
                                     if new_caution:
                                         update_data['caution_menage'] = new_caution
+                                    else:
+                                        update_data['caution_menage'] = "Non renseigné"
                                     if new_salle_occ:
                                         update_data['salle_occupation'] = new_salle_occ
+                                    else:
+                                        update_data['salle_occupation'] = "Non renseigné"
                                     
                                     if update_data:
                                         success, error = checker.update_reservation_google(
@@ -458,14 +511,64 @@ def main():
                                         
                                         if success:
                                             st.success("✅ Modifications sauvegardées!")
-                                            # Mettre à jour les données sans refresh complet
                                             st.session_state.occupations[idx].update(update_data)
+                                            st.session_state.last_update = datetime.now()
+                                            time_module.sleep(0.5)
+                                            st.rerun()
                                         else:
                                             st.error(f"❌ Erreur: {error}")
+                                
+                                if clear_submitted:
+                                    # Remettre tout à "Non renseigné"
+                                    update_data = {
+                                        'accompte': "Non renseigné",
+                                        'reste_a_payer': "Non renseigné",
+                                        'prix_location': "Non renseigné",
+                                        'caution_menage': "Non renseigné",
+                                        'salle_occupation': "Non renseigné"
+                                    }
+                                    
+                                    success, error = checker.update_reservation_google(
+                                        st.session_state.salle.lower(),
+                                        st.session_state.date_input,
+                                        occupant,
+                                        update_data
+                                    )
+                                    
+                                    if success:
+                                        st.success("🗑️ Informations remises à zéro!")
+                                        st.session_state.occupations[idx].update(update_data)
+                                        st.session_state.last_update = datetime.now()
+                                        time_module.sleep(0.5)
+                                        st.rerun()
                                     else:
-                                        st.info("ℹ️ Aucune modification détectée")
+                                        st.error(f"❌ Erreur: {error}")
                         
                         st.markdown("<br>", unsafe_allow_html=True)
+
+    # Auto-refresh toutes les 60 secondes si des résultats sont affichés
+    if 'occupations' in st.session_state and st.session_state.occupations:
+        # Afficher dernière mise à jour
+        if 'last_update' in st.session_state:
+            st.caption(f"🔄 Dernière mise à jour: {st.session_state.last_update.strftime('%H:%M:%S')}")
+        
+        # Bouton refresh manuel
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("🔄 Rafraîchir", key="manual_refresh"):
+                st.session_state.last_update = datetime.now()
+                st.rerun()
+        with col2:
+            st.caption("Les données se rafraîchissent automatiquement toutes les 60 secondes")
+        
+        # Auto-refresh avec JavaScript
+        st.markdown("""
+        <script>
+            setTimeout(function() {
+                window.location.reload();
+            }, 60000);
+        </script>
+        """, unsafe_allow_html=True)
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
     st.markdown(
@@ -477,33 +580,6 @@ def main():
         unsafe_allow_html=True
     )
 
-
-# Auto-refresh toutes les 60 secondes si des résultats sont affichés
-if 'occupations' in st.session_state and st.session_state.occupations:
-    import time
-    from datetime import datetime
-    
-    # Afficher dernière mise à jour
-    if 'last_update' in st.session_state:
-        st.caption(f"🔄 Dernière mise à jour: {st.session_state.last_update.strftime('%H:%M:%S')}")
-    
-    # Bouton refresh manuel
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if st.button("🔄 Rafraîchir", key="manual_refresh"):
-            st.session_state.last_update = datetime.now()
-            st.rerun()
-    with col2:
-        st.caption("Les données se rafraîchissent automatiquement toutes les 60 secondes")
-    
-    # Auto-refresh avec JavaScript (plus fluide que Python)
-    st.markdown("""
-    <script>
-        setTimeout(function() {
-            window.location.reload();
-        }, 60000); // Refresh toutes les 60 secondes
-    </script>
-    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
