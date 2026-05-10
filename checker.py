@@ -921,7 +921,7 @@ class SalleChecker:
 
             all_values = worksheet.get_all_values()
 
-            # Chercher la ligne correspondante
+            # Chercher la ligne correspondante (clé : nom + date, salle optionnelle)
             for row_idx, row in enumerate(all_values[5:], start=6):
                 if len(row) < 5:
                     continue
@@ -930,12 +930,13 @@ class SalleChecker:
                 nom_cell = row[2] if len(row) > 2 else None
                 date_cell = row[4] if len(row) > 4 else None
 
-                if not salle_cell or not nom_cell or not date_cell:
+                if not nom_cell or not date_cell:
                     continue
 
-                # Vérifier la correspondance
-                if not salle_matches(str(salle_cell).lower().strip(), salle_name):
-                    continue
+                # Correspondance salle : soit vide, soit match (permet de trouver même si salle effacée)
+                if salle_cell:
+                    if not salle_matches(str(salle_cell).lower().strip(), salle_name):
+                        continue
 
                 dates = self._parse_date_from_sheet(date_cell)
                 if d not in dates:

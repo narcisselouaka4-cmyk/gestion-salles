@@ -25,16 +25,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS Moderne & Professionnel
+# CSS Refonte Complète
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    * {
-        font-family: 'Inter', sans-serif;
-    }
-    
-    /* Header Moderne */
+
+    * { font-family: 'Inter', sans-serif; }
+
+    /* Header */
     .main-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -44,90 +42,60 @@ st.markdown("""
         margin: -3rem -1rem 2rem -1rem;
         box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
     }
-    
-    .main-header h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-        letter-spacing: -0.02em;
-    }
-    
-    .sub-header {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1rem;
-        font-weight: 400;
-        margin-top: 0.5rem;
-    }
-    
-    /* Cards Glassmorphism */
+    .main-header h1 { font-size: 2.5rem; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+    .sub-header { color: rgba(255,255,255,0.9); font-size: 1rem; font-weight: 400; margin-top: 0.5rem; }
+
+    /* Cards */
     .glass-card {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    
-    .glass-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    }
-    
-    /* Résultats Modernes */
+
+    /* Résultats */
     .result-libre {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
         border-radius: 16px;
         padding: 2rem;
         margin: 1.5rem 0;
-        box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 10px 40px rgba(16,185,129,0.3);
         text-align: center;
         animation: fadeIn 0.4s ease-out;
     }
-    
-    .result-libre h3 {
-        font-size: 1.8rem;
-        font-weight: 700;
-        margin: 0 0 0.5rem 0;
-    }
-    
+    .result-libre h3 { font-size: 1.8rem; font-weight: 700; margin: 0 0 0.5rem 0; }
+
     .result-occupe {
         background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
         color: white;
         border-radius: 16px;
         padding: 2rem;
         margin: 1.5rem 0;
-        box-shadow: 0 10px 40px rgba(244, 63, 94, 0.3);
+        box-shadow: 0 10px 40px rgba(244,63,94,0.3);
         text-align: center;
         animation: fadeIn 0.4s ease-out;
     }
-    
-    .result-occupe h3 {
-        font-size: 1.8rem;
-        font-weight: 700;
-        margin: 0 0 0.5rem 0;
-    }
-    
-    /* Cartes d'occupation Modernes */
+    .result-occupe h3 { font-size: 1.8rem; font-weight: 700; margin: 0 0 0.5rem 0; }
+
+    /* Carte Occupation */
     .occupation-card {
-        background: white;
+        background: #ffffff;
         border-radius: 12px;
         padding: 1.25rem;
         margin: 0.75rem 0;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
         border-left: 4px solid #667eea;
         transition: all 0.2s ease;
         animation: fadeIn 0.4s ease-out;
     }
-    
     .occupation-card:hover {
         transform: translateX(4px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
     }
-    
+
     .time-display {
         display: inline-flex;
         align-items: center;
@@ -139,86 +107,98 @@ st.markdown("""
         font-weight: 600;
         font-size: 0.95rem;
     }
-    
-    .occupant-name {
-        font-size: 1.1rem;
-        color: #1f2937;
-        margin-top: 0.75rem;
+
+    .occupant-name { font-size: 1.1rem; color: #1f2937; margin-top: 0.75rem; font-weight: 500; }
+    .activity-name { font-size: 0.95rem; color: #6b7280; margin-top: 0.25rem; }
+
+    /* Détails */
+    .reservation-details {
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #475569;
+    }
+    .reservation-details strong { color: #1e293b; font-weight: 600; }
+
+    /* Formulaire d'édition */
+    .edit-section {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    .edit-section h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    /* Badge discret "non renseigné" */
+    .badge-missing {
+        display: inline-block;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 0.7rem;
         font-weight: 500;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        margin-left: 0.4rem;
+        vertical-align: middle;
     }
-    
-    .activity-name {
-        font-size: 0.95rem;
-        color: #6b7280;
-        margin-top: 0.25rem;
+
+    /* Boutons */
+    .btn-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
     }
-    
+
+    /* Footer */
+    .footer {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        margin-top: 3rem;
+        padding: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+    }
+
     /* Animations */
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    
-    /* Footer moderne */
-    .footer {
-        text-align: center;
-        color: #9ca3af;
-        font-size: 0.85rem;
-        margin-top: 3rem;
-        padding: 1.5rem;
-        border-top: 1px solid #e5e7eb;
+
+    /* Streamlit overrides pour inputs */
+    div[data-testid="stExpander"] {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
     }
-    
-    /* Détails réservation */
-    .reservation-details {
-        margin-top: 1rem;
-        padding: 0.75rem;
-        background: rgba(99, 102, 241, 0.1);
-        border-radius: 8px;
-        font-size: 0.9rem;
-        line-height: 1.6;
+    div[data-testid="stExpanderDetails"] {
+        background: #ffffff !important;
     }
-    
-    .detail-item {
-        margin: 0.3rem 0;
-        color: #374151;
+    div[data-testid="stForm"] {
+        border: none !important;
+        padding: 0 !important;
     }
-    
-    .detail-item strong {
-        color: #1f2937;
-    }
-    
+
     /* Mode sombre */
     @media (prefers-color-scheme: dark) {
-        .glass-card {
-            background: rgba(30, 41, 59, 0.8);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .occupation-card {
-            background: #1e293b;
-            border-left-color: #818cf8;
-        }
-        
-        .occupant-name {
-            color: #f1f5f9;
-        }
-        
-        .activity-name {
-            color: #94a3b8;
-        }
-        
-        .reservation-details {
-            background: rgba(99, 102, 241, 0.2);
-        }
-        
-        .detail-item {
-            color: #e2e8f0;
-        }
-        
-        .detail-item strong {
-            color: #60a5fa;
-        }
+        .glass-card { background: #1e293b; border-color: #334155; }
+        .occupation-card { background: #1e293b; border-left-color: #818cf8; }
+        .occupant-name { color: #f1f5f9; }
+        .activity-name { color: #94a3b8; }
+        .reservation-details { background: #0f172a; }
+        .edit-section { background: #1e293b; border-color: #334155; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -420,95 +400,56 @@ def main():
                         # Formulaire d'édition dans un expander
                         if occ.get('source') == 'réservation':
                             with st.expander("✏️ Modifier les informations"):
-                                st.markdown("<hr style='margin: 1.5rem 0; border: none; border-top: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
 
-                                with st.form(key=f"edit_form_{idx}"):
+                                # Petit résumé en haut du formulaire
+                                st.markdown(f"""
+                                <div style="margin-bottom:1rem;">
+                                    <span style="font-size:0.875rem; color:#64748b;">Réservation</span>
+                                    <strong style="color:#1e293b; margin-left:0.5rem;">{occupant}</strong>
+                                    <span style="font-size:0.75rem; color:#94a3b8; margin-left:0.5rem;">{horaire_display}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+
+                                with st.form(key=f"edit_form_{idx}", border=False):
                                     col1, col2 = st.columns(2)
 
                                     with col1:
-                                        # Nom
                                         nom_val = occ.get('occupant', '')
                                         new_nom = st.text_input("👤 Nom", value=nom_val)
 
-                                        # Accompte
                                         accompte_val = occ.get('accompte', '')
-                                        if accompte_val:
-                                            new_accompte = st.text_input("💰 Accompte (€)", value=accompte_val, placeholder="Ex: 100")
-                                        else:
-                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>💰 Accompte (€) non renseigné</p>", unsafe_allow_html=True)
-                                            new_accompte = st.text_input("", value=accompte_val, placeholder="Ex: 100", label_visibility="collapsed")
+                                        new_accompte = st.text_input("💰 Accompte (€)", value=accompte_val, placeholder="Ex: 100")
 
-                                        # Reste à payer
                                         reste_val = occ.get('reste_a_payer', '')
-                                        if reste_val:
-                                            new_reste = st.text_input("💳 Reste à payer (€)", value=reste_val, placeholder="Ex: 550")
-                                        else:
-                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>💳 Reste à payer (€) non renseigné</p>", unsafe_allow_html=True)
-                                            new_reste = st.text_input("", value=reste_val, placeholder="Ex: 550", label_visibility="collapsed")
+                                        new_reste = st.text_input("💳 Reste à payer (€)", value=reste_val, placeholder="Ex: 550")
 
                                     with col2:
-                                        # Prix location
                                         prix_val = occ.get('prix_location', '')
-                                        if prix_val:
-                                            new_prix = st.text_input("💵 Prix location (€)", value=prix_val, placeholder="Ex: 650")
-                                        else:
-                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>💵 Prix location (€) non renseigné</p>", unsafe_allow_html=True)
-                                            new_prix = st.text_input("", value=prix_val, placeholder="Ex: 650", label_visibility="collapsed")
+                                        new_prix = st.text_input("💵 Prix location (€)", value=prix_val, placeholder="Ex: 650")
 
-                                        # Caution
                                         caution_val = occ.get('caution_menage', '')
-                                        if caution_val:
-                                            new_caution = st.text_input("🧹 Caution", value=caution_val, placeholder="Ex: Oui")
-                                        else:
-                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>🧹 Caution non renseigné</p>", unsafe_allow_html=True)
-                                            new_caution = st.text_input("", value=caution_val, placeholder="Ex: Oui", label_visibility="collapsed")
+                                        new_caution = st.text_input("🧹 Caution", value=caution_val, placeholder="Ex: Oui")
 
-                                        # Salle (colonne B du planning)
                                         salle_val = occ.get('salle', '')
-                                        if salle_val:
-                                            new_salle = st.text_input("🏠 Salle", value=salle_val, placeholder="Ex: Salle principale")
-                                        else:
-                                            st.markdown("<p style='color:#ef4444; font-size:0.875rem; margin-bottom:-0.5rem;'>🏠 Salle non renseigné</p>", unsafe_allow_html=True)
-                                            new_salle = st.text_input("", value=salle_val, placeholder="Ex: Salle principale", label_visibility="collapsed")
+                                        new_salle = st.text_input("🏠 Salle", value=salle_val, placeholder="Ex: Salle principale")
 
-                                    # Boutons côte à côte
-                                    col_save, col_clear = st.columns(2)
-                                    with col_save:
-                                        submitted = st.form_submit_button("💾 Sauvegarder", type="primary")
-
-                                    with col_clear:
-                                        clear_submitted = st.form_submit_button("🗑️ Tout effacer")
+                                    # Actions : Sauvegarder principal + Effacer discret
+                                    c1, c2, c3 = st.columns([3, 1, 1])
+                                    with c1:
+                                        submitted = st.form_submit_button("💾 Sauvegarder les modifications", type="primary", use_container_width=True)
+                                    with c3:
+                                        clear_submitted = st.form_submit_button("🗑️ Effacer", use_container_width=True)
 
                                     if submitted:
-                                        # Préparer les données - champ vide = "" (cellule vide dans Google Sheets)
                                         update_data = {}
                                         if new_nom != occupant:
                                             update_data['occupant'] = new_nom if new_nom else "Non renseigné"
 
-                                        if new_accompte:
-                                            update_data['accompte'] = f"{new_accompte}€" if '€' not in new_accompte else new_accompte
-                                        else:
-                                            update_data['accompte'] = ""
-
-                                        if new_reste:
-                                            update_data['reste_a_payer'] = f"{new_reste}€" if '€' not in new_reste else new_reste
-                                        else:
-                                            update_data['reste_a_payer'] = ""
-
-                                        if new_prix:
-                                            update_data['prix_location'] = f"{new_prix}€" if '€' not in new_prix else new_prix
-                                        else:
-                                            update_data['prix_location'] = ""
-
-                                        if new_caution:
-                                            update_data['caution_menage'] = new_caution
-                                        else:
-                                            update_data['caution_menage'] = ""
-
-                                        if new_salle:
-                                            update_data['salle'] = new_salle
-                                        else:
-                                            update_data['salle'] = ""
+                                        update_data['accompte'] = f"{new_accompte}€" if new_accompte and '€' not in new_accompte else (new_accompte if new_accompte else "")
+                                        update_data['reste_a_payer'] = f"{new_reste}€" if new_reste and '€' not in new_reste else (new_reste if new_reste else "")
+                                        update_data['prix_location'] = f"{new_prix}€" if new_prix and '€' not in new_prix else (new_prix if new_prix else "")
+                                        update_data['caution_menage'] = new_caution if new_caution else ""
+                                        update_data['salle'] = new_salle if new_salle else ""
 
                                         if update_data:
                                             success, error = checker.update_reservation_google(
@@ -519,16 +460,15 @@ def main():
                                             )
 
                                             if success:
-                                                st.success("✅ Modifications sauvegardées!")
+                                                st.success("Modifications sauvegardées")
                                                 st.session_state.occupations[idx].update(update_data)
                                                 st.session_state.last_update = datetime.now()
                                                 time_module.sleep(0.5)
                                                 st.rerun()
                                             else:
-                                                st.error(f"❌ Erreur: {error}")
+                                                st.error(f"Erreur : {error}")
 
                                     if clear_submitted:
-                                        # Remettre tout à vide (cellule vide dans Google Sheets)
                                         update_data = {
                                             'accompte': "",
                                             'reste_a_payer': "",
@@ -545,15 +485,13 @@ def main():
                                         )
 
                                         if success:
-                                            st.success("🗑️ Informations remises à zéro!")
+                                            st.success("Informations effacées")
                                             st.session_state.occupations[idx].update(update_data)
                                             st.session_state.last_update = datetime.now()
                                             time_module.sleep(0.5)
                                             st.rerun()
                                         else:
-                                            st.error(f"❌ Erreur: {error}")
-
-                                st.markdown("<br>", unsafe_allow_html=True)
+                                            st.error(f"Erreur : {error}")
 
     # Auto-refresh toutes les 60 secondes si des résultats sont affichés
     if 'occupations' in st.session_state and st.session_state.occupations:
