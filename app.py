@@ -478,5 +478,32 @@ def main():
     )
 
 
+# Auto-refresh toutes les 60 secondes si des résultats sont affichés
+if 'occupations' in st.session_state and st.session_state.occupations:
+    import time
+    from datetime import datetime
+    
+    # Afficher dernière mise à jour
+    if 'last_update' in st.session_state:
+        st.caption(f"🔄 Dernière mise à jour: {st.session_state.last_update.strftime('%H:%M:%S')}")
+    
+    # Bouton refresh manuel
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("🔄 Rafraîchir", key="manual_refresh"):
+            st.session_state.last_update = datetime.now()
+            st.rerun()
+    with col2:
+        st.caption("Les données se rafraîchissent automatiquement toutes les 60 secondes")
+    
+    # Auto-refresh avec JavaScript (plus fluide que Python)
+    st.markdown("""
+    <script>
+        setTimeout(function() {
+            window.location.reload();
+        }, 60000); // Refresh toutes les 60 secondes
+    </script>
+    """, unsafe_allow_html=True)
+
 if __name__ == "__main__":
     main()
