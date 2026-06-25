@@ -1155,20 +1155,33 @@ def onglet_editer_planning(checker):
 # ═══════════════════════════════════════════════════════════
 def main():
     # ═══════════════════════════════════════════════════════════
-    # AUTHENTIFICATION
+    # AUTHENTIFICATION — env vars (compatibilité Render sans shell)
     # ═══════════════════════════════════════════════════════════
-    try:
-        credentials = st.secrets["auth_credentials"]
-        cookie = st.secrets["auth_cookie"]
-    except Exception:
+    auth_user = os.environ.get("AUTH_USER", "")
+    auth_name = os.environ.get("AUTH_NAME", "")
+    auth_hash = os.environ.get("AUTH_HASH", "")
+    cookie_name = os.environ.get("AUTH_COOKIE_NAME", "cfpdc_auth_cookie")
+    cookie_key = os.environ.get("AUTH_COOKIE_KEY", "cfpdc_secret_key_2024")
+    cookie_expiry = int(os.environ.get("AUTH_COOKIE_EXPIRY", "30"))
+
+    if not auth_user or not auth_hash:
         st.error("Configuration d'authentification manquante. Contactez l'administrateur.")
         st.stop()
 
+    credentials = {
+        "usernames": {
+            auth_user: {
+                "name": auth_name or auth_user,
+                "password": auth_hash,
+            }
+        }
+    }
+
     authenticator = stauth.Authenticate(
         credentials,
-        cookie["name"],
-        cookie["key"],
-        cookie_expiry_days=cookie["expiry_days"]
+        cookie_name,
+        cookie_key,
+        cookie_expiry_days=cookie_expiry
     )
 
     name, authentication_status, username = authenticator.login("Login", "main")
