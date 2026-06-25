@@ -623,7 +623,7 @@ def render_sidebar(checker, authenticator=None):
             </div>
             """, unsafe_allow_html=True)
             if authenticator:
-                authenticator.logout("Déconnexion", "sidebar")
+                authenticator.logout(button_name='Déconnexion', location='sidebar')
             st.markdown("<hr style='border-color: #334155; margin: 1rem 0;'>", unsafe_allow_html=True)
 
         # ── Paramètres rapides ──
@@ -1184,7 +1184,12 @@ def main():
         cookie_expiry_days=cookie_expiry
     )
 
-    name, authentication_status, username = authenticator.login("Login", "main")
+    login_result = authenticator.login(location='main')
+
+    if login_result is not None:
+        name, authentication_status, username = login_result
+    else:
+        authentication_status = None
 
     if authentication_status == False:
         st.error("❌ Mot de passe incorrect")
