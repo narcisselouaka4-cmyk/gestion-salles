@@ -1071,7 +1071,9 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 worksheet = spreadsheet.get_worksheet(0)
 
-            # Construire la nouvelle ligne (A-K, K = Ajouté par)
+            # Construire la nouvelle ligne (A-K)
+            # Colonne J = "ajouté par [username]"
+            added_by = data.get('added_by', 'Inconnu')
             new_row = [
                 "",                                   # A
                 data.get('salle', ''),                # B
@@ -1082,8 +1084,8 @@ class SalleChecker:
                 data.get('reste_a_payer', ''),        # G
                 data.get('prix_location', ''),        # H
                 data.get('caution_menage', ''),       # I
-                data.get('salle_occupation', ''),     # J
-                data.get('added_by', ''),             # K
+                f"ajouté par {added_by}" if added_by else "",  # J
+                "",                                   # K (vide)
             ]
 
             # TOUJOURS ajouter à la fin du sheet, jamais réutiliser une ligne vide
@@ -1301,7 +1303,7 @@ class SalleChecker:
             worksheet.update(f'A{next_row}:E{next_row}',
                 [[username, name, password_hash, created_by, created_at]],
                 value_input_option='USER_ENTERED')
-            return True, f"Utilisateur {username} ajouté (ligne {next_row})"
+            return True, "Compte créé avec succès"
         except Exception as e:
             return False, f"Erreur ajout utilisateur: {str(e)}"
 

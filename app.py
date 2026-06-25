@@ -1190,52 +1190,13 @@ def onglet_utilisateurs(checker, authenticator):
     st.markdown("""
     <div style="margin-bottom: 1.5rem;">
         <h2 style="margin: 0; font-size: 1.4rem;">Gestion des Utilisateurs</h2>
-        <p style="color: #94a3b8; margin-top: 0.25rem; font-size: 0.9rem;">Créer un compte, modifier un mot de passe, ou supprimer un compte</p>
+        <p style="color: #94a3b8; margin-top: 0.25rem; font-size: 0.9rem;">Modifier votre mot de passe ou gérer les comptes (admin)</p>
     </div>
     """, unsafe_allow_html=True)
 
     current_user = st.session_state.get("username", "")
     admin_user = os.environ.get("AUTH_USER", "")
     is_admin = current_user == admin_user
-
-    # ── Créer un compte (tout le monde) ──
-    st.markdown("### ➕ Créer un compte")
-    st.markdown("<div class='form-section'>", unsafe_allow_html=True)
-
-    with st.form(key="user_create_form", border=False):
-        c1, c2 = st.columns(2)
-        with c1:
-            new_username = st.text_input("Username (login)", placeholder="ex: pastor")
-            new_password = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères")
-        with c2:
-            new_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean")
-            new_password_confirm = st.text_input("Confirmer le mot de passe", type="password")
-
-        create_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
-
-        if create_submitted:
-            if not new_username or not new_password:
-                st.error("Le username et le mot de passe sont obligatoires.")
-            elif new_password != new_password_confirm:
-                st.error("Les mots de passe ne correspondent pas.")
-            elif len(new_password) < 4:
-                st.error("Le mot de passe doit faire au moins 4 caractères.")
-            else:
-                h = stauth.Hasher()
-                pwd_hash = h.hash(new_password)
-                success, info = checker.add_user_google(
-                    new_username.strip(),
-                    new_name.strip() or new_username.strip(),
-                    pwd_hash,
-                    created_by=current_user
-                )
-                if success:
-                    st.success(f"✅ {info}")
-                    st.rerun()
-                else:
-                    st.error(f"❌ {info}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Modifier un mot de passe ──
     st.markdown("### 🔑 Modifier un mot de passe")
