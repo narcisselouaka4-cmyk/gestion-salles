@@ -415,6 +415,37 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
+
+    /* ── Auth Card ── */
+    .auth-card {
+        background: rgba(128,128,128,0.06);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(128,128,128,0.1);
+        border-radius: 24px;
+        padding: 2rem 2.25rem;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+    }
+    .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 1.25rem 0;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(128,128,128,0.15);
+    }
+
+    /* Reduce padding inside auth card inputs */
+    .auth-card div[data-testid="stTextInput"] input {
+        border-radius: 12px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1334,27 +1365,65 @@ def onglet_utilisateurs(checker, authenticator):
 # ÉCRAN DE LOGIN (non authentifié)
 # ═══════════════════════════════════════════════════════════
 def render_login_screen(checker, authenticator):
-    """Affiche l'écran de login avec création de compte et reset password."""
+    """Affiche l'écran de login centré et épuré."""
 
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 1rem 2.5rem;">
-        <div style="font-size: 3rem; margin-bottom: 0.75rem;">🏢</div>
-        <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; font-weight: 800;">CFPDC — Gestion des Salles</h2>
-        <p style="color: #94a3b8; font-size: 0.95rem;">Accès réservé aux membres du centre</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if "login_mode" not in st.session_state:
+        st.session_state.login_mode = "login"
+    mode = st.session_state.login_mode
 
-    c1, c2 = st.columns(2)
+    # Centrer tout
+    _, center, _ = st.columns([1, 2, 1])
 
-    with c1:
-        st.markdown("### 🔐 Se connecter")
-        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
-        authenticator.login(location='main')
-        st.markdown("</div>", unsafe_allow_html=True)
+    with center:
+        # Header
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem 0 1.5rem;">
+            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏢</div>
+            <h2 style="font-size: 1.6rem; margin: 0; font-weight: 800; letter-spacing: -0.02em;">CFPDC</h2>
+            <p style="color: #94a3b8; margin-top: 0.35rem; font-size: 0.9rem;">Gestion des Salles</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    with c2:
-        with st.expander("✨ Créer un compte", expanded=False):
-            st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+        st.markdown("<div class='auth-card'>", unsafe_allow_html=True)
+
+        # ── Tabs de navigation ──
+        t1, t2, t3 = st.columns(3)
+        with t1:
+            if st.button("🔐 Connexion", key="btn_login_tab", use_container_width=True,
+                         type="primary" if mode == "login" else "secondary"):
+                st.session_state.login_mode = "login"
+                st.rerun()
+        with t2:
+            if st.button("✨ Compte", key="btn_register_tab", use_container_width=True,
+                         type="primary" if mode == "register" else "secondary"):
+                st.session_state.login_mode = "register"
+                st.rerun()
+        with t3:
+            if st.button("🔑 MDP", key="btn_reset_tab", use_container_width=True,
+                         type="primary" if mode == "reset" else "secondary"):
+                st.session_state.login_mode = "reset"
+                st.rerun()
+
+        st.markdown("<div style='margin-top: 1.25rem;'></div>", unsafe_allow_html=True)
+
+        if mode == "login":
+            st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Se connecter</h4>", unsafe_allow_html=True)
+            authenticator.login(location='main')
+
+            st.markdown("<div class='auth-divider'>ou</div>", unsafe_allow_html=True)
+
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("✨ Créer un compte", use_container_width=True, key="btn_to_register"):
+                    st.session_state.login_mode = "register"
+                    st.rerun()
+            with c2:
+                if st.button("🔑 MDP oublié", use_container_width=True, key="btn_to_reset"):
+                    st.session_state.login_mode = "reset"
+                    st.rerun()
+
+        elif mode == "register":
+            st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Créer un compte</h4>", unsafe_allow_html=True)
 
             with st.form(key="login_register_form", border=False):
                 r1, r2 = st.columns(2)
@@ -1363,7 +1432,7 @@ def render_login_screen(checker, authenticator):
                     reg_pwd = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères", key="reg_pwd")
                 with r2:
                     reg_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean", key="reg_name")
-                    reg_pwd_confirm = st.text_input("Confirmer", type="password", placeholder="Répéter le mot de passe", key="reg_pwd_confirm")
+                    reg_pwd_confirm = st.text_input("Confirmer", type="password", placeholder="Répéter", key="reg_pwd_confirm")
 
                 reg_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
 
@@ -1388,49 +1457,54 @@ def render_login_screen(checker, authenticator):
                         else:
                             st.error(f"❌ {info}")
 
-            st.markdown("</div>", unsafe_allow_html=True)
+            if st.button("← Retour à la connexion", key="btn_back_login_from_reg", use_container_width=True):
+                st.session_state.login_mode = "login"
+                st.rerun()
 
-    # ── Modifier mot de passe (sans être connecté) ──
-    with st.expander("🔑 Mot de passe oublié ?", expanded=False):
-        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+        elif mode == "reset":
+            st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Mot de passe oublié</h4>", unsafe_allow_html=True)
 
-        with st.form(key="login_reset_pwd_form", border=False):
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                reset_user = st.text_input("Username", placeholder="ex: narcisse", key="reset_user")
-                reset_old = st.text_input("Ancien mot de passe", type="password", key="reset_old")
-            with c2:
-                reset_new = st.text_input("Nouveau mot de passe", type="password", key="reset_new")
-                reset_new_confirm = st.text_input("Confirmer", type="password", key="reset_new_confirm")
+            with st.form(key="login_reset_pwd_form", border=False):
+                c1, c2 = st.columns(2)
+                with c1:
+                    reset_user = st.text_input("Username", placeholder="ex: narcisse", key="reset_user")
+                    reset_old = st.text_input("Ancien mot de passe", type="password", key="reset_old")
+                with c2:
+                    reset_new = st.text_input("Nouveau mot de passe", type="password", key="reset_new")
+                    reset_new_confirm = st.text_input("Confirmer", type="password", key="reset_new_confirm")
 
-            reset_submitted = st.form_submit_button("Mettre à jour le mot de passe", type="primary", use_container_width=True)
+                reset_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
 
-            if reset_submitted:
-                if not reset_user or not reset_old or not reset_new:
-                    st.error("Tous les champs sont obligatoires.")
-                elif reset_new != reset_new_confirm:
-                    st.error("Les nouveaux mots de passe ne correspondent pas.")
-                elif len(reset_new) < 4:
-                    st.error("Le mot de passe doit faire au moins 4 caractères.")
-                else:
-                    all_users = checker.get_users_google()
-                    env_user = os.environ.get("AUTH_USER", "")
-
-                    if reset_user.strip() == env_user:
-                        st.error("❌ Impossible de modifier le compte administrateur ici. Contactez l'administrateur.")
-                    elif reset_user.strip() not in all_users:
-                        st.error(f"❌ Utilisateur '{reset_user}' non trouvé.")
+                if reset_submitted:
+                    if not reset_user or not reset_old or not reset_new:
+                        st.error("Tous les champs sont obligatoires.")
+                    elif reset_new != reset_new_confirm:
+                        st.error("Les nouveaux mots de passe ne correspondent pas.")
+                    elif len(reset_new) < 4:
+                        st.error("Le mot de passe doit faire au moins 4 caractères.")
                     else:
-                        h = stauth.Hasher()
-                        if not h.check(reset_old, all_users[reset_user.strip()]["password"]):
-                            st.error("❌ Ancien mot de passe incorrect.")
+                        all_users = checker.get_users_google()
+                        env_user = os.environ.get("AUTH_USER", "")
+
+                        if reset_user.strip() == env_user:
+                            st.error("❌ Impossible de modifier le compte administrateur ici.")
+                        elif reset_user.strip() not in all_users:
+                            st.error(f"❌ Utilisateur '{reset_user}' non trouvé.")
                         else:
-                            new_hash = h.hash(reset_new)
-                            success, info = checker.update_user_password_google(reset_user.strip(), new_hash)
-                            if success:
-                                st.success(f"✅ {info}. Vous pouvez vous connecter.")
+                            h = stauth.Hasher()
+                            if not h.check(reset_old, all_users[reset_user.strip()]["password"]):
+                                st.error("❌ Ancien mot de passe incorrect.")
                             else:
-                                st.error(f"❌ {info}")
+                                new_hash = h.hash(reset_new)
+                                success, info = checker.update_user_password_google(reset_user.strip(), new_hash)
+                                if success:
+                                    st.success(f"✅ {info}. Vous pouvez vous connecter.")
+                                else:
+                                    st.error(f"❌ {info}")
+
+            if st.button("← Retour à la connexion", key="btn_back_login_from_rst", use_container_width=True):
+                st.session_state.login_mode = "login"
+                st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
 
