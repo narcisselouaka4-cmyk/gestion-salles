@@ -960,6 +960,8 @@ class SalleChecker:
 
                 _add_update('B', 'salle')
                 _add_update('C', 'occupant')
+                _add_update('D', 'horaire')
+                _add_update('E', 'date')
                 _add_update('F', 'accompte')
                 _add_update('G', 'reste_a_payer')
                 _add_update('H', 'prix_location')
@@ -978,6 +980,121 @@ class SalleChecker:
 
         except Exception as e:
             return False, f"Erreur mise à jour Google Sheets: {str(e)}"
+
+    def delete_reservation_google(self, salle_name: str, d: date, occupant: str) -> tuple:
+        """
+        Supprime une ligne de réservation dans Google Sheets.
+        Retourne (success, error).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Planning quotidien")
+            except gspread.exceptions.WorksheetNotFound:
+                worksheet = spreadsheet.get_worksheet(0)
+
+            all_values = worksheet.get_all_values()
+            print(f"[DEBUG delete] Searching for salle={salle_name}, date={d}, occupant='{occupant}'")
+            print(f"[DEBUG delete] Total rows in sheet: {len(all_values)}")
+
+            for row_idx, row in enumerate(all_values[5:], start=6):
+                if len(row) < 5:
+                    continue
+
+                salle_cell = row[1] if len(row) > 1 else None
+                nom_cell = row[2] if len(row) > 2 else None
+                date_cell = row[4] if len(row) > 4 else None
+
+                if not nom_cell or not date_cell:
+                    continue
+
+                salle_str = str(salle_cell).strip() if salle_cell else ""
+                nom_str = str(nom_cell).strip() if nom_cell else ""
+                date_str = str(date_cell).strip() if date_cell else ""
+
+                print(f"[DEBUG delete] Row {row_idx}: salle='{salle_str}', nom='{nom_str}', date='{date_str}'")
+
+                if salle_cell:
+                    if not salle_matches(str(salle_cell).lower().strip(), salle_name):
+                        print(f"[DEBUG delete]   -> salle mismatch")
+                        continue
+
+                dates = self._parse_date_from_sheet(date_cell)
+                print(f"[DEBUG delete]   -> parsed dates: {dates}")
+                if d not in dates:
+                    print(f"[DEBUG delete]   -> date mismatch")
+                    continue
+
+                if nom_str != occupant:
+                    print(f"[DEBUG delete]   -> occupant mismatch: '{nom_str}' != '{occupant}'")
+                    continue
+
+                print(f"[DEBUG delete]   -> MATCH! Deleting row {row_idx}")
+                worksheet.delete_rows(row_idx)
+                return True, None
+
+            print(f"[DEBUG delete] -> No match found")
+            return False, "Réservation non trouvée"
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return False, f"Erreur suppression Google Sheets: {str(e)}"
+
+    def add_reservation_google(self, data: dict) -> tuple:
+        """
+        Ajoute une nouvelle réservation dans Google Sheets à la première ligne vide.
+        Retourne (success, error_or_info).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Planning quotidien")
+            except gspread.exceptions.WorksheetNotFound:
+                worksheet = spreadsheet.get_worksheet(0)
+
+            # Construire la nouvelle ligne
+            new_row = [
+                "",
+                data.get('salle', ''),
+                data.get('occupant', ''),
+                data.get('horaire', ''),
+                data.get('date', ''),
+                data.get('accompte', ''),
+                data.get('reste_a_payer', ''),
+                data.get('prix_location', ''),
+                data.get('caution_menage', ''),
+                data.get('salle_occupation', ''),
+            ]
+
+            # TOUJOURS ajouter à la fin du sheet, jamais réutiliser une ligne vide
+            all_values = worksheet.get_all_values()
+            next_row = len(all_values) + 1
+            worksheet.add_rows(1)
+
+            worksheet.update(f'A{next_row}:J{next_row}', [new_row], value_input_option='USER_ENTERED')
+            return True, f"ligne {next_row}"
+
+        except Exception as e:
+            return False, f"Erreur ajout Google Sheets: {str(e)}"
 
     def get_all_reservations(self, salle_name: str, d: date) -> tuple:
         """
