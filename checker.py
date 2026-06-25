@@ -1229,3 +1229,111 @@ class SalleChecker:
         if error:
             result["error"] = error
         return result
+
+    # ═══════════════════════════════════════════════════════════
+    # GESTION DES UTILISATEURS (onglet "Utilisateurs" du Sheet)
+    # ═══════════════════════════════════════════════════════════
+    def get_users_google(self) -> dict:
+        """
+        Récupère tous les utilisateurs depuis l'onglet 'Utilisateurs' du Google Sheet.
+        Retourne un dict compatible streamlit-authenticator:
+        {username: {name: ..., password: ...}}
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return {}
+
+        try:
+            client, error = self._get_google_client()
+            if error or not client:
+                return {}
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Utilisateurs")
+            except gspread.exceptions.WorksheetNotFound:
+                return {}
+
+            rows = worksheet.get_all_records()
+            users = {}
+            for row in rows:
+                username = str(row.get('username', '')).strip()
+                name = str(row.get('name', '')).strip()
+                pwd_hash = str(row.get('password_hash', '')).strip()
+                if username and pwd_hash:
+                    users[username] = {
+                        "name": name or username,
+                        "password": pwd_hash
+                    }
+            return users
+        except Exception:
+            return {}
+
+    def add_user_google(self, username: str, name: str, password_hash: str, created_by: str = "") -> tuple:
+        """
+        Ajoute un nouvel utilisateur dans l'onglet 'Utilisateurs'.
+        Retourne (success, error_or_info).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Utilisateurs")
+            except gspread.exceptions.WorksheetNotFound:
+                # Créer l'onglet s'il n'existe pas
+                worksheet = spreadsheet.add_worksheet(title="Utilisateurs", rows=100, cols=5)
+                worksheet.update('A1:E1', [['username', 'name', 'password_hash', 'created_by', 'created_at']])
+
+            from datetime import datetime
+            created_at = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+            all_values = worksheet.get_all_values()
+            next_row = len(all_values) + 1
+            worksheet.add_rows(1)
+
+            worksheet.update(f'A{next_row}:E{next_row}',
+                [[username, name, password_hash, created_by, created_at]],
+                value_input_option='USER_ENTERED')
+            return True, f"Utilisateur {username} ajouté (ligne {next_row})"
+        except Exception as e:
+            return False, f"Erreur ajout utilisateur: {str(e)}"
+
+    def update_user_password_google(self, username: str, new_password_hash: str) -> tuple:
+        """
+        Met à jour le mot de passe d'un utilisateur dans l'onglet 'Utilisateurs'.
+        Retourne (success, error_or_info).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Utilisateurs")
+            except gspread.exceptions.WorksheetNotFound:
+                return False, "Onglet 'Utilisateurs' introuvable"
+
+            all_values = worksheet.get_all_values()
+            for i, row in enumerate(all_values):
+                if i == 0:
+                    continue  # header
+                if len(row) > 0 and str(row[0]).strip() == username:
+                    worksheet.update(f'C{i+1}', [[new_password_hash]], value_input_option='USER_ENTERED')
+                    return True, f"Mot de passe de {username} mis à jour"
+
+            return False, f"Utilisateur {username} non trouvé"
+        except Exception as e:
+            return False, f"Erreur mise à jour mot de passe: {str(e)}"
