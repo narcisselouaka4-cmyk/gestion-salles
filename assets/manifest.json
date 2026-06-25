@@ -1,0 +1,22 @@
+{
+  "name": "CFPDC - Gestion des Salles",
+  "short_name": "CFPDC Salles",
+  "description": "Application de gestion des salles et réservations du CFPDC",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://gestion-salles-usjp.onrender.com/app/static/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://gestion-salles-usjp.onrender.com/app/static/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

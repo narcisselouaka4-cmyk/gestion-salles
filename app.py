@@ -5,6 +5,7 @@ UI Professionnelle type Dashboard SaaS
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import datetime, time, date, timedelta
 import os
 import time as time_module
@@ -26,6 +27,35 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ═══════════════════════════════════════════════════════════
+# PWA MANIFEST (injection dans le <head>)
+# ═══════════════════════════════════════════════════════════
+components.html("""
+<script>
+    // Manifest PWA
+    if (!document.querySelector('link[rel="manifest"]')) {
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = 'https://gestion-salles-usjp.onrender.com/assets/manifest.json';
+        document.head.appendChild(link);
+    }
+    // Theme color
+    if (!document.querySelector('meta[name="theme-color"]')) {
+        const meta = document.createElement('meta');
+        meta.name = 'theme-color';
+        meta.content = '#4f46e5';
+        document.head.appendChild(meta);
+    }
+    // Apple touch icon
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+        const icon = document.createElement('link');
+        icon.rel = 'apple-touch-icon';
+        icon.href = 'https://gestion-salles-usjp.onrender.com/assets/qr-code.png';
+        document.head.appendChild(icon);
+    }
+</script>
+""", height=0)
 
 # ═══════════════════════════════════════════════════════════
 # CSS MODERNE — Design System SaaS (Light & Dark compatible)

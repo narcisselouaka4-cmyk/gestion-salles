@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFPDC — Gestion des Salles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: #f8fafc;
+        }
+        .container {
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+        }
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            margin-bottom: 2.5rem;
+        }
+        .qr-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease;
+        }
+        .qr-card:hover {
+            transform: translateY(-4px);
+        }
+        .qr-card img {
+            width: 240px;
+            height: 240px;
+            border-radius: 16px;
+            background: white;
+            padding: 12px;
+        }
+        .qr-label {
+            margin-top: 1.25rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 1rem 2rem;
+            border-radius: 16px;
+            transition: all 0.2s ease;
+            margin-bottom: 1.5rem;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(79, 70, 229, 0.3);
+        }
+        .instructions {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: left;
+        }
+        .instructions h3 {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+        .instructions ol {
+            padding-left: 1.25rem;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.7;
+        }
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+        .footer {
+            margin-top: 2.5rem;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+        @media (max-width: 480px) {
+            .qr-card img { width: 200px; height: 200px; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏢</div>
+        <h1>CFPDC — Gestion des Salles</h1>
+        <p class="subtitle">Centre de Formation Pédagogique des Disciples du Christ</p>
+
+        <div class="qr-card">
+            <img src="https://gestion-salles-usjp.onrender.com/assets/qr-code.png" alt="QR Code CFPDC Salles">
+            <div class="qr-label">Scannez pour ouvrir l'application</div>
+        </div>
+
+        <a href="https://gestion-salles-usjp.onrender.com/" class="btn" target="_blank">
+            🚀 Ouvrir l'application
+        </a>
+
+        <div class="instructions">
+            <h3>📱 Ajouter sur l'écran d'accueil</h3>
+            <ol>
+                <li><strong>iPhone :</strong> Appuyez sur <strong>Partager</strong> (⬆️) puis <strong>Sur l'écran d'accueil</strong></li>
+                <li><strong>Android :</strong> Menu ⋮ → <strong>Ajouter à l'écran d'accueil</strong></li>
+                <li><strong>Ordinateur :</strong> Chrome → ⋮ → <strong>Installer l'application</strong></li>
+            </ol>
+        </div>
+
+        <div class="footer">
+            CFPDC © 2024 — Accès réservé aux membres du centre
+        </div>
+    </div>
+</body>
+</html>

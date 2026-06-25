@@ -4,11 +4,37 @@ Application de gestion de réservation de salles pour le CFPDC.
 
 ## Fonctionnalités
 
-- Consultation de la disponibilité des salles en temps réel
-- Planning fixe depuis fichiers Excel locaux
-- Réservations ponctuelles via Google Sheets (optionnel)
-- Interface responsive (mobile et desktop)
-- Support mode sombre/clair
+- 🔐 **Accès protégé** — Authentification par username/mot de passe (membres CFPDC uniquement)
+- 📊 **Dashboard professionnel** — KPI cards, timeline visuelle, détails des occupations
+- 📅 **Consultation** — Disponibilité des salles en temps réel (lecture seule)
+- ✏️ **CRUD complet** — Ajouter, modifier, supprimer des réservations dans Google Sheets
+- 📱 **PWA** — Installable sur téléphone et ordinateur (icône sur l'écran d'accueil)
+- 🌙 **Mode sombre/clair** — Compatible avec le thème système
+- 📶 **QR Code** — Accès instantané par scan depuis un smartphone
+
+## Accès rapide
+
+| Méthode | Lien | Instructions |
+|---|---|---|
+| 🌐 **Application** | [gestion-salles-usjp.onrender.com](https://gestion-salles-usjp.onrender.com/) | Ouvrir dans le navigateur |
+| 📱 **QR Code** | Voir `assets/qr-code.png` | Imprimez et affichez au CFPDC |
+| 📥 **PWA** | Même lien | Chrome/Edge → ⋮ → "Installer l'application" |
+| 🏠 **Landing page** | [GitHub Pages](https://narcisselouaka4-cmyk.github.io/gestion-salles/) | Page avec QR code et instructions |
+
+### Installer sur l'écran d'accueil (PWA)
+
+**iPhone/iPad :**
+1. Ouvrez [l'application](https://gestion-salles-usjp.onrender.com/) dans Safari
+2. Appuyez sur le bouton **Partager** (⬆️)
+3. Sélectionnez **"Sur l'écran d'accueil"**
+
+**Android :**
+1. Ouvrez [l'application](https://gestion-salles-usjp.onrender.com/) dans Chrome
+2. Menu ⋮ (3 points) → **"Ajouter à l'écran d'accueil"**
+
+**Ordinateur (Chrome/Edge) :**
+1. Ouvrez [l'application](https://gestion-salles-usjp.onrender.com/)
+2. Barre d'adresse → icône **➕ Installer** (ou menu ⋮ → Installer l'application)
 
 ## Prérequis
 
