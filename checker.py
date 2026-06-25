@@ -1337,3 +1337,36 @@ class SalleChecker:
             return False, f"Utilisateur {username} non trouvé"
         except Exception as e:
             return False, f"Erreur mise à jour mot de passe: {str(e)}"
+
+    def delete_user_google(self, username: str) -> tuple:
+        """
+        Supprime un utilisateur (ligne entière) dans l'onglet 'Utilisateurs'.
+        Retourne (success, error_or_info).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Utilisateurs")
+            except gspread.exceptions.WorksheetNotFound:
+                return False, "Onglet 'Utilisateurs' introuvable"
+
+            all_values = worksheet.get_all_values()
+            for i, row in enumerate(all_values):
+                if i == 0:
+                    continue  # header
+                if len(row) > 0 and str(row[0]).strip() == username:
+                    worksheet.delete_rows(i + 1)
+                    return True, f"Utilisateur {username} supprimé"
+
+            return False, f"Utilisateur {username} non trouvé"
+        except Exception as e:
+            return False, f"Erreur suppression utilisateur: {str(e)}"
