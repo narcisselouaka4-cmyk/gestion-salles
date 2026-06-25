@@ -1154,7 +1154,7 @@ def onglet_editer_planning(checker):
 # ONGLET 3 — GESTION DES UTILISATEURS
 # ═══════════════════════════════════════════════════════════
 def onglet_utilisateurs(checker, authenticator):
-    """Onglet pour créer des comptes et modifier les mots de passe."""
+    """Onglet pour créer des comptes (admin uniquement) et modifier les mots de passe."""
 
     st.markdown("""
     <div style="margin-bottom: 1.5rem;">
@@ -1164,79 +1164,75 @@ def onglet_utilisateurs(checker, authenticator):
     """, unsafe_allow_html=True)
 
     current_user = st.session_state.get("username", "")
+    admin_user = os.environ.get("AUTH_USER", "")
+    is_admin = current_user == admin_user
 
-    c1, c2 = st.columns(2)
+    # ── Admin : créer un compte + modifier n'importe quel compte ──
+    if is_admin:
+        c1, c2 = st.columns(2)
 
-    with c1:
-        st.markdown("### ➕ Créer un compte")
-        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+        with c1:
+            st.markdown("### ➕ Créer un compte")
+            st.markdown("<div class='form-section'>", unsafe_allow_html=True)
 
-        with st.form(key="user_create_form", border=False):
-            new_username = st.text_input("Username (login)", placeholder="ex: pastor")
-            new_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean")
-            new_password = st.text_input("Mot de passe", type="password", placeholder="Min. 8 caractères")
-            new_password_confirm = st.text_input("Confirmer le mot de passe", type="password")
+            with st.form(key="user_create_form", border=False):
+                new_username = st.text_input("Username (login)", placeholder="ex: pastor")
+                new_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean")
+                new_password = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères")
+                new_password_confirm = st.text_input("Confirmer le mot de passe", type="password")
 
-            create_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
+                create_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
 
-            if create_submitted:
-                if not new_username or not new_password:
-                    st.error("Le username et le mot de passe sont obligatoires.")
-                elif new_password != new_password_confirm:
-                    st.error("Les mots de passe ne correspondent pas.")
-                elif len(new_password) < 4:
-                    st.error("Le mot de passe doit faire au moins 4 caractères.")
-                else:
-                    h = stauth.Hasher()
-                    pwd_hash = h.hash(new_password)
-                    success, info = checker.add_user_google(
-                        new_username.strip(),
-                        new_name.strip() or new_username.strip(),
-                        pwd_hash,
-                        created_by=current_user
-                    )
-                    if success:
-                        st.success(f"✅ {info}")
-                        # Recharger les credentials
-                        st.rerun()
+                if create_submitted:
+                    if not new_username or not new_password:
+                        st.error("Le username et le mot de passe sont obligatoires.")
+                    elif new_password != new_password_confirm:
+                        st.error("Les mots de passe ne correspondent pas.")
+                    elif len(new_password) < 4:
+                        st.error("Le mot de passe doit faire au moins 4 caractères.")
                     else:
-                        st.error(f"❌ {info}")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with c2:
-        st.markdown("### 🔑 Modifier un mot de passe")
-        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
-
-        with st.form(key="user_pwd_form", border=False):
-            target_user = st.text_input("Username à modifier", placeholder="ex: narcisse")
-            old_pwd_check = st.text_input("Ancien mot de passe (vérification)", type="password")
-            new_pwd = st.text_input("Nouveau mot de passe", type="password")
-            new_pwd_confirm = st.text_input("Confirmer nouveau mot de passe", type="password")
-
-            pwd_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
-
-            if pwd_submitted:
-                if not target_user or not new_pwd:
-                    st.error("Le username et le nouveau mot de passe sont obligatoires.")
-                elif new_pwd != new_pwd_confirm:
-                    st.error("Les mots de passe ne correspondent pas.")
-                elif len(new_pwd) < 4:
-                    st.error("Le mot de passe doit faire au moins 4 caractères.")
-                else:
-                    # Vérifier que l'utilisateur existe (et vérifier l'ancien mdp si c'est soi-même)
-                    all_users = checker.get_users_google()
-                    env_user = os.environ.get("AUTH_USER", "")
-
-                    if target_user.strip() == env_user:
-                        st.error("❌ Impossible de modifier le compte administrateur ici. Contactez l'administrateur.")
-                    elif target_user.strip() not in all_users:
-                        st.error(f"❌ Utilisateur '{target_user}' non trouvé.")
-                    else:
-                        # Vérifier l'ancien mot de passe
                         h = stauth.Hasher()
-                        if not h.check(old_pwd_check, all_users[target_user.strip()]["password"]):
-                            st.error("❌ Ancien mot de passe incorrect.")
+                        pwd_hash = h.hash(new_password)
+                        success, info = checker.add_user_google(
+                            new_username.strip(),
+                            new_name.strip() or new_username.strip(),
+                            pwd_hash,
+                            created_by=current_user
+                        )
+                        if success:
+                            st.success(f"✅ {info}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {info}")
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with c2:
+            st.markdown("### 🔑 Modifier un mot de passe")
+            st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+            with st.form(key="user_pwd_form", border=False):
+                target_user = st.text_input("Username à modifier", placeholder="ex: narcisse")
+                new_pwd = st.text_input("Nouveau mot de passe", type="password")
+                new_pwd_confirm = st.text_input("Confirmer nouveau mot de passe", type="password")
+
+                pwd_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
+
+                if pwd_submitted:
+                    if not target_user or not new_pwd:
+                        st.error("Le username et le nouveau mot de passe sont obligatoires.")
+                    elif new_pwd != new_pwd_confirm:
+                        st.error("Les mots de passe ne correspondent pas.")
+                    elif len(new_pwd) < 4:
+                        st.error("Le mot de passe doit faire au moins 4 caractères.")
+                    else:
+                        all_users = checker.get_users_google()
+                        env_user = os.environ.get("AUTH_USER", "")
+
+                        if target_user.strip() == env_user:
+                            st.error("❌ Impossible de modifier le compte administrateur ici. Contactez l'administrateur.")
+                        elif target_user.strip() not in all_users:
+                            st.error(f"❌ Utilisateur '{target_user}' non trouvé.")
                         else:
                             new_hash = h.hash(new_pwd)
                             success, info = checker.update_user_password_google(target_user.strip(), new_hash)
@@ -1246,13 +1242,56 @@ def onglet_utilisateurs(checker, authenticator):
                             else:
                                 st.error(f"❌ {info}")
 
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Utilisateur normal : modifier SON propre mot de passe ──
+    else:
+        st.info(f"🔒 Connecté en tant que **{current_user}**. Seul l'administrateur peut créer des comptes.")
+
+        st.markdown("### 🔑 Modifier mon mot de passe")
+        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+        with st.form(key="user_pwd_form", border=False):
+            st.markdown(f"**Username :** {current_user}")
+            old_pwd = st.text_input("Ancien mot de passe", type="password")
+            new_pwd = st.text_input("Nouveau mot de passe", type="password")
+            new_pwd_confirm = st.text_input("Confirmer nouveau mot de passe", type="password")
+
+            pwd_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
+
+            if pwd_submitted:
+                if not old_pwd or not new_pwd:
+                    st.error("L'ancien et le nouveau mot de passe sont obligatoires.")
+                elif new_pwd != new_pwd_confirm:
+                    st.error("Les mots de passe ne correspondent pas.")
+                elif len(new_pwd) < 4:
+                    st.error("Le mot de passe doit faire au moins 4 caractères.")
+                else:
+                    all_users = checker.get_users_google()
+                    if current_user not in all_users:
+                        st.error("❌ Votre compte n'a pas été trouvé.")
+                    else:
+                        h = stauth.Hasher()
+                        if not h.check(old_pwd, all_users[current_user]["password"]):
+                            st.error("❌ Ancien mot de passe incorrect.")
+                        else:
+                            new_hash = h.hash(new_pwd)
+                            success, info = checker.update_user_password_google(current_user, new_hash)
+                            if success:
+                                st.success(f"✅ {info}")
+                                st.rerun()
+                            else:
+                                st.error(f"❌ {info}")
+
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Liste des utilisateurs ──
+    # ── Liste des utilisateurs (admin voit tout, user normal voit seulement son nom) ──
     st.markdown("### 👥 Utilisateurs enregistrés")
     users = checker.get_users_google()
     if users:
         for u, data in users.items():
+            if not is_admin and u != current_user:
+                continue
             st.markdown(f"""
             <div class="res-row" style="padding: 0.75rem 1.25rem;">
                 <div class="res-name" style="font-weight: 700;">{u}</div>
