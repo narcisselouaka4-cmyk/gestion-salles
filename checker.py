@@ -515,7 +515,11 @@ class SalleChecker:
                 reste = self._get_cell_value(row, 6)          # Colonne G
                 prix_location = self._get_cell_value(row, 7)  # Colonne H
                 caution = self._get_cell_value(row, 8)        # Colonne I
-                salle_occupation = self._get_cell_value(row, 9) # Colonne J
+                # Colonne J = "ajouté par [username]" (nouveau) ou anciennement salle_occupation
+                added_by_raw = self._get_cell_value(row, 9)
+                added_by = ""
+                if added_by_raw.startswith("ajouté par "):
+                    added_by = added_by_raw.replace("ajouté par ", "")
 
                 if not salle_cell or not date_cell:
                     continue
@@ -541,8 +545,6 @@ class SalleChecker:
                     infos_manquantes.append("Prix de location")
                 if not caution:
                     infos_manquantes.append("Chèque caution ménage")
-                if not salle_occupation:
-                    infos_manquantes.append("Salle d'occupation")
 
                 # Gérer l'horaire
                 debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
@@ -556,7 +558,7 @@ class SalleChecker:
                     "prix_location": prix_location,
                     "caution_menage": caution,
                     "salle": str(salle_cell).strip() if salle_cell else "",
-                    "salle_occupation": salle_occupation,
+                    "added_by": added_by,
                     "source": "réservation"
                 }
 
@@ -835,7 +837,11 @@ class SalleChecker:
                 reste = self._get_cell_value(row, 6)          # Colonne G
                 prix_location = self._get_cell_value(row, 7)  # Colonne H
                 caution = self._get_cell_value(row, 8)        # Colonne I
-                salle_occupation = self._get_cell_value(row, 9) # Colonne J
+                # Colonne J = "ajouté par [username]" (nouveau) ou anciennement salle_occupation
+                added_by_raw = self._get_cell_value(row, 9)
+                added_by = ""
+                if added_by_raw.startswith("ajouté par "):
+                    added_by = added_by_raw.replace("ajouté par ", "")
 
                 if not salle_cell or not date_cell:
                     continue
@@ -859,8 +865,6 @@ class SalleChecker:
                     infos_manquantes.append("Prix de location")
                 if not caution:
                     infos_manquantes.append("Chèque caution ménage")
-                if not salle_occupation:
-                    infos_manquantes.append("Salle d'occupation")
 
                 debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
 
@@ -873,7 +877,7 @@ class SalleChecker:
                     "prix_location": prix_location,
                     "caution_menage": caution,
                     "salle": str(salle_cell).strip() if salle_cell else "",
-                    "salle_occupation": salle_occupation,
+                    "added_by": added_by,
                     "source": "réservation"
                 }
 
@@ -966,7 +970,7 @@ class SalleChecker:
                 _add_update('G', 'reste_a_payer')
                 _add_update('H', 'prix_location')
                 _add_update('I', 'caution_menage')
-                _add_update('J', 'salle_occupation')
+                # NOTE: colonne J = "ajouté par [username]" — ne pas modifier
 
                 if clear_ranges:
                     worksheet.batch_clear(clear_ranges)

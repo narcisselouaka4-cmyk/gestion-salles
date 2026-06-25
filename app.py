@@ -564,6 +564,7 @@ def render_detail_card(occ):
         ('prix_location', 'Prix loc.'),
         ('caution_menage', 'Caution'),
         ('salle', 'Salle'),
+        ('added_by', 'Ajouté par'),
     ]:
         val = occ.get(key, '')
         if val:
@@ -592,6 +593,7 @@ def render_reservation_row(occ, idx):
     salle = occ.get("salle", "")
     prix = occ.get("prix_location", "")
     reste = occ.get("reste_a_payer", "")
+    added_by = occ.get("added_by", "")
 
     tags = []
     if prix:
@@ -600,6 +602,8 @@ def render_reservation_row(occ, idx):
         tags.append(f'<span class="res-tag">Reste: {reste}</span>')
     if salle:
         tags.append(f'<span class="res-tag">{salle}</span>')
+    if added_by:
+        tags.append(f'<span class="res-tag" style="background: rgba(79,70,229,0.12); color: #6366f1;">👤 {added_by}</span>')
 
     return f"""
     <div class="res-row animate-in" style="animation-delay: {idx * 0.05}s;">
