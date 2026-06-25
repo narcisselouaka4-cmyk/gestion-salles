@@ -1071,18 +1071,19 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 worksheet = spreadsheet.get_worksheet(0)
 
-            # Construire la nouvelle ligne
+            # Construire la nouvelle ligne (A-K, K = Ajouté par)
             new_row = [
-                "",
-                data.get('salle', ''),
-                data.get('occupant', ''),
-                data.get('horaire', ''),
-                data.get('date', ''),
-                data.get('accompte', ''),
-                data.get('reste_a_payer', ''),
-                data.get('prix_location', ''),
-                data.get('caution_menage', ''),
-                data.get('salle_occupation', ''),
+                "",                                   # A
+                data.get('salle', ''),                # B
+                data.get('occupant', ''),             # C
+                data.get('horaire', ''),              # D
+                data.get('date', ''),                 # E
+                data.get('accompte', ''),             # F
+                data.get('reste_a_payer', ''),        # G
+                data.get('prix_location', ''),        # H
+                data.get('caution_menage', ''),       # I
+                data.get('salle_occupation', ''),     # J
+                data.get('added_by', ''),             # K
             ]
 
             # TOUJOURS ajouter à la fin du sheet, jamais réutiliser une ligne vide
@@ -1090,7 +1091,7 @@ class SalleChecker:
             next_row = len(all_values) + 1
             worksheet.add_rows(1)
 
-            worksheet.update(f'A{next_row}:J{next_row}', [new_row], value_input_option='USER_ENTERED')
+            worksheet.update(f'A{next_row}:K{next_row}', [new_row], value_input_option='USER_ENTERED')
             return True, f"ligne {next_row}"
 
         except Exception as e:

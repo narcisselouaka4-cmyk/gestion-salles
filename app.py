@@ -6,6 +6,7 @@ UI Professionnelle type Dashboard SaaS
 
 import streamlit as st
 import streamlit.components.v1 as components
+import streamlit_authenticator as stauth
 from datetime import datetime, time, date, timedelta
 import os
 import time as time_module
@@ -602,7 +603,7 @@ def init_checker():
 # ═══════════════════════════════════════════════════════════
 # SIDEBAR — Fonctionnelle
 # ═══════════════════════════════════════════════════════════
-def render_sidebar(checker):
+def render_sidebar(checker, authenticator=None):
     with st.sidebar:
         # Logo
         st.markdown("""
@@ -613,7 +614,17 @@ def render_sidebar(checker):
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<hr style='border-color: #334155; margin: 1rem 0;'>", unsafe_allow_html=True)
+        # ── Utilisateur connecté ──
+        if st.session_state.get("name"):
+            st.markdown(f"""
+            <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; border: 1px solid rgba(79,70,229,0.2);">
+                <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Connecté</div>
+                <div style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin-top: 0.25rem;">👤 {st.session_state.get("name")}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if authenticator:
+                authenticator.logout("Déconnexion", "sidebar")
+            st.markdown("<hr style='border-color: #334155; margin: 1rem 0;'>", unsafe_allow_html=True)
 
         # ── Paramètres rapides ──
         st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Paramètres rapides</div>", unsafe_allow_html=True)
@@ -1118,6 +1129,7 @@ def onglet_editer_planning(checker):
                     'prix_location': f"{add_prix}€" if add_prix and '€' not in add_prix else (add_prix if add_prix else ""),
                     'caution_menage': add_caution if add_caution else "",
                     'salle_occupation': "",
+                    'added_by': st.session_state.get("username", "Inconnu"),
                 }
 
                 success, info = checker.add_reservation_google(new_data)
@@ -1142,12 +1154,48 @@ def onglet_editer_planning(checker):
 # MAIN
 # ═══════════════════════════════════════════════════════════
 def main():
+    # ═══════════════════════════════════════════════════════════
+    # AUTHENTIFICATION
+    # ═══════════════════════════════════════════════════════════
+    try:
+        credentials = st.secrets["auth_credentials"]
+        cookie = st.secrets["auth_cookie"]
+    except Exception:
+        st.error("Configuration d'authentification manquante. Contactez l'administrateur.")
+        st.stop()
+
+    authenticator = stauth.Authenticate(
+        credentials,
+        cookie["name"],
+        cookie["key"],
+        cookie_expiry_days=cookie["expiry_days"]
+    )
+
+    name, authentication_status, username = authenticator.login("Login", "main")
+
+    if authentication_status == False:
+        st.error("❌ Mot de passe incorrect")
+        st.stop()
+    elif authentication_status is None:
+        st.markdown("""
+        <div style="text-align: center; padding: 4rem 1rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Accès réservé</h2>
+            <p style="color: #94a3b8;">Veuillez entrer vos identifiants pour accéder à l'application CFPDC.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+    elif authentication_status == True:
+        st.session_state["username"] = username
+        st.session_state["name"] = name
+
+    # ── App principale ──
     checker = init_checker()
     if checker is None:
         st.error("Dossier 'salles/' introuvable. Vérifiez l'installation.")
         st.stop()
 
-    render_sidebar(checker)
+    render_sidebar(checker, authenticator)
 
     st.markdown("""
     <div style="margin-bottom: 2rem;">
