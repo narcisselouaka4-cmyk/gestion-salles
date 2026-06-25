@@ -1331,6 +1331,112 @@ def onglet_utilisateurs(checker, authenticator):
 
 
 # ═══════════════════════════════════════════════════════════
+# ÉCRAN DE LOGIN (non authentifié)
+# ═══════════════════════════════════════════════════════════
+def render_login_screen(checker, authenticator):
+    """Affiche l'écran de login avec création de compte et reset password."""
+
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 1rem 2.5rem;">
+        <div style="font-size: 3rem; margin-bottom: 0.75rem;">🏢</div>
+        <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; font-weight: 800;">CFPDC — Gestion des Salles</h2>
+        <p style="color: #94a3b8; font-size: 0.95rem;">Accès réservé aux membres du centre</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        st.markdown("### 🔐 Se connecter")
+        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+        authenticator.login(location='main')
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with c2:
+        st.markdown("### ✨ Créer un compte")
+        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+        with st.form(key="login_register_form", border=False):
+            r1, r2 = st.columns(2)
+            with r1:
+                reg_username = st.text_input("Username", placeholder="ex: pastor", key="reg_username")
+                reg_pwd = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères", key="reg_pwd")
+            with r2:
+                reg_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean", key="reg_name")
+                reg_pwd_confirm = st.text_input("Confirmer", type="password", placeholder="Répéter le mot de passe", key="reg_pwd_confirm")
+
+            reg_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
+
+            if reg_submitted:
+                if not reg_username or not reg_pwd:
+                    st.error("Le username et le mot de passe sont obligatoires.")
+                elif reg_pwd != reg_pwd_confirm:
+                    st.error("Les mots de passe ne correspondent pas.")
+                elif len(reg_pwd) < 4:
+                    st.error("Le mot de passe doit faire au moins 4 caractères.")
+                else:
+                    h = stauth.Hasher()
+                    pwd_hash = h.hash(reg_pwd)
+                    success, info = checker.add_user_google(
+                        reg_username.strip(),
+                        reg_name.strip() or reg_username.strip(),
+                        pwd_hash,
+                        created_by="inscription"
+                    )
+                    if success:
+                        st.success(f"✅ {info}. Vous pouvez maintenant vous connecter.")
+                    else:
+                        st.error(f"❌ {info}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Modifier mot de passe (sans être connecté) ──
+    st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
+    st.markdown("### 🔑 Mot de passe oublié ?")
+    st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+    with st.form(key="login_reset_pwd_form", border=False):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            reset_user = st.text_input("Username", placeholder="ex: narcisse", key="reset_user")
+            reset_old = st.text_input("Ancien mot de passe", type="password", key="reset_old")
+        with c2:
+            reset_new = st.text_input("Nouveau mot de passe", type="password", key="reset_new")
+            reset_new_confirm = st.text_input("Confirmer", type="password", key="reset_new_confirm")
+
+        reset_submitted = st.form_submit_button("Mettre à jour le mot de passe", type="primary", use_container_width=True)
+
+        if reset_submitted:
+            if not reset_user or not reset_old or not reset_new:
+                st.error("Tous les champs sont obligatoires.")
+            elif reset_new != reset_new_confirm:
+                st.error("Les nouveaux mots de passe ne correspondent pas.")
+            elif len(reset_new) < 4:
+                st.error("Le mot de passe doit faire au moins 4 caractères.")
+            else:
+                all_users = checker.get_users_google()
+                env_user = os.environ.get("AUTH_USER", "")
+
+                if reset_user.strip() == env_user:
+                    st.error("❌ Impossible de modifier le compte administrateur ici. Contactez l'administrateur.")
+                elif reset_user.strip() not in all_users:
+                    st.error(f"❌ Utilisateur '{reset_user}' non trouvé.")
+                else:
+                    h = stauth.Hasher()
+                    if not h.check(reset_old, all_users[reset_user.strip()]["password"]):
+                        st.error("❌ Ancien mot de passe incorrect.")
+                    else:
+                        new_hash = h.hash(reset_new)
+                        success, info = checker.update_user_password_google(reset_user.strip(), new_hash)
+                        if success:
+                            st.success(f"✅ {info}. Vous pouvez vous connecter.")
+                        else:
+                            st.error(f"❌ {info}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════════════════════════
 def main():
@@ -1373,53 +1479,48 @@ def main():
         cookie_expiry_days=cookie_expiry
     )
 
-    authenticator.login(location='main')
-
+    # Vérifier l'état d'authentification (cookie)
+    authenticator.login(location='unrendered')
     authentication_status = st.session_state.get('authentication_status')
-    name = st.session_state.get('name')
-    username = st.session_state.get('username')
 
-    if authentication_status == False:
-        st.error("❌ Mot de passe incorrect")
-        st.stop()
-    elif authentication_status is None:
-        st.markdown("""
-        <div style="text-align: center; padding: 4rem 1rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
-            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Accès réservé</h2>
-            <p style="color: #94a3b8;">Veuillez entrer vos identifiants pour accéder à l'application CFPDC.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.stop()
-    elif authentication_status == True:
+    if authentication_status is True:
+        name = st.session_state.get('name')
+        username = st.session_state.get('username')
         st.session_state["username"] = username
         st.session_state["name"] = name
 
-    if checker is None:
-        st.error("Dossier 'salles/' introuvable. Vérifiez l'installation.")
-        st.stop()
+        if checker is None:
+            st.error("Dossier 'salles/' introuvable. Vérifiez l'installation.")
+            st.stop()
 
-    render_sidebar(checker, authenticator)
+        render_sidebar(checker, authenticator)
 
-    st.markdown("""
-    <div style="margin-bottom: 2rem;">
-        <h1 style="font-size: 1.8rem; margin: 0;">Tableau de bord</h1>
-        <p style="color: #94a3b8; margin-top: 0.35rem; font-size: 0.95rem;">
-            Gestion des salles et réservations — CFPDC
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+        st.markdown("""
+        <div style="margin-bottom: 2rem;">
+            <h1 style="font-size: 1.8rem; margin: 0;">Tableau de bord</h1>
+            <p style="color: #94a3b8; margin-top: 0.35rem; font-size: 0.95rem;">
+                Gestion des salles et réservations — CFPDC
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    tab1, tab2, tab3 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Utilisateurs"])
+        tab1, tab2, tab3 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Utilisateurs"])
 
-    with tab1:
-        onglet_gestion_salle(checker)
+        with tab1:
+            onglet_gestion_salle(checker)
 
-    with tab2:
-        onglet_editer_planning(checker)
+        with tab2:
+            onglet_editer_planning(checker)
 
-    with tab3:
-        onglet_utilisateurs(checker, authenticator)
+        with tab3:
+            onglet_utilisateurs(checker, authenticator)
+
+    elif authentication_status == False:
+        st.error("❌ Mot de passe incorrect")
+        render_login_screen(checker, authenticator)
+    else:
+        # Pas encore authentifié
+        render_login_screen(checker, authenticator)
 
 
 if __name__ == "__main__":
