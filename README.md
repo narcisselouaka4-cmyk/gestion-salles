@@ -1,6 +1,6 @@
 # Gestion des Salles
 
-Application de gestion de réservation de salles pour le CFPDC (Centre de Formation et de Perfectionnement des Dirigeants Chrétiens).
+Application de gestion de réservation de salles pour le CFPDC.
 
 ## Fonctionnalités
 
