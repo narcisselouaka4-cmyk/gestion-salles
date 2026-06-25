@@ -1386,26 +1386,6 @@ def render_login_screen(checker, authenticator):
 
         st.markdown("<div class='auth-card'>", unsafe_allow_html=True)
 
-        # ── Tabs de navigation ──
-        t1, t2, t3 = st.columns(3)
-        with t1:
-            if st.button("🔐 Connexion", key="btn_login_tab", use_container_width=True,
-                         type="primary" if mode == "login" else "secondary"):
-                st.session_state.login_mode = "login"
-                st.rerun()
-        with t2:
-            if st.button("✨ Compte", key="btn_register_tab", use_container_width=True,
-                         type="primary" if mode == "register" else "secondary"):
-                st.session_state.login_mode = "register"
-                st.rerun()
-        with t3:
-            if st.button("🔑 MDP", key="btn_reset_tab", use_container_width=True,
-                         type="primary" if mode == "reset" else "secondary"):
-                st.session_state.login_mode = "reset"
-                st.rerun()
-
-        st.markdown("<div style='margin-top: 1.25rem;'></div>", unsafe_allow_html=True)
-
         if mode == "login":
             st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Se connecter</h4>", unsafe_allow_html=True)
             authenticator.login(location='main')
@@ -1418,7 +1398,7 @@ def render_login_screen(checker, authenticator):
                     st.session_state.login_mode = "register"
                     st.rerun()
             with c2:
-                if st.button("🔑 MDP oublié", use_container_width=True, key="btn_to_reset"):
+                if st.button("🔑 Mot de passe oublié", use_container_width=True, key="btn_to_reset"):
                     st.session_state.login_mode = "reset"
                     st.rerun()
 
