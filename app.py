@@ -5,7 +5,7 @@ UI Professionnelle type Dashboard SaaS
 """
 
 import streamlit as st
-from datetime import datetime, time, date
+from datetime import datetime, time, date, timedelta
 import os
 import time as time_module
 
@@ -28,18 +28,14 @@ st.set_page_config(
 )
 
 # ═══════════════════════════════════════════════════════════
-# CSS MODERNE — Design System SaaS
+# CSS MODERNE — Design System SaaS (Light & Dark compatible)
 # ═══════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-    /* ── Reset & Base ── */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-    /* Supprimer le fond gris de Streamlit */
-    .stApp {
-        background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
-    }
+    /* Pas de fond forcé — on laisse Streamlit gérer le thème */
     .main .block-container {
         max-width: 1400px;
         padding: 2rem 3rem;
@@ -47,7 +43,7 @@ st.markdown("""
 
     /* ── Sidebar ── */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
         border-right: none;
     }
     section[data-testid="stSidebar"] .css-1d391kg {
@@ -61,9 +57,9 @@ st.markdown("""
 
     /* ── KPI Cards ── */
     .kpi-card {
-        background: rgba(255,255,255,0.85);
+        background: rgba(128,128,128,0.08);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.5);
+        border: 1px solid rgba(128,128,128,0.12);
         border-radius: 20px;
         padding: 1.5rem;
         box-shadow: 0 4px 24px rgba(0,0,0,0.04);
@@ -94,13 +90,12 @@ st.markdown("""
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: #64748b;
+        color: #94a3b8;
         margin-bottom: 0.5rem;
     }
     .kpi-value {
         font-size: 1.75rem;
         font-weight: 800;
-        color: #0f172a;
         line-height: 1.2;
     }
     .kpi-sub {
@@ -111,104 +106,76 @@ st.markdown("""
 
     /* ── Glass Cards ── */
     .glass-card {
-        background: rgba(255,255,255,0.7);
+        background: rgba(128,128,128,0.06);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.6);
+        border: 1px solid rgba(128,128,128,0.1);
         border-radius: 24px;
         padding: 2rem;
         box-shadow: 0 8px 32px rgba(0,0,0,0.04);
         margin-bottom: 1.5rem;
     }
 
-    /* ── Status Badge ── */
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.4rem 1rem;
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-    .status-badge.libre {
-        background: #d1fae5;
-        color: #065f46;
-    }
-    .status-badge.occupe {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-    .status-badge.info {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: currentColor;
-        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-
-    /* ── Timeline ── */
-    .timeline-container {
+    /* ── Timeline (Flexbox — pas de position absolute) ── */
+    .timeline-bar {
+        display: flex;
+        width: 100%;
+        height: 48px;
+        background: rgba(128,128,128,0.1);
+        border-radius: 12px;
+        overflow: hidden;
         position: relative;
-        padding: 1.5rem 0;
-        margin: 1rem 0;
-    }
-    .timeline-track {
-        height: 4px;
-        background: #e2e8f0;
-        border-radius: 2px;
-        position: relative;
-        margin: 0 2rem;
+        margin-bottom: 0.5rem;
     }
     .timeline-slot {
-        position: absolute;
-        height: 32px;
-        border-radius: 8px;
-        top: -14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.7rem;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 700;
         color: white;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         cursor: pointer;
-        transition: transform 0.2s ease;
+        transition: transform 0.2s ease, filter 0.2s ease;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        padding: 0 8px;
+        padding: 0 6px;
+        border-radius: 10px;
+        margin: 4px 2px;
+        min-width: 0;
     }
     .timeline-slot:hover {
-        transform: scale(1.05);
+        transform: scale(1.03);
+        filter: brightness(1.15);
         z-index: 10;
+    }
+    .timeline-empty {
+        flex: 1;
+        min-width: 0;
     }
     .timeline-labels {
         display: flex;
         justify-content: space-between;
-        margin: 0.5rem 2rem 0;
         font-size: 0.7rem;
         color: #94a3b8;
         font-weight: 500;
+        padding: 0 4px;
     }
 
-    /* ── Reservation Row (Table style) ── */
+    /* ── Reservation Row ── */
     .res-row {
         display: flex;
         align-items: center;
         padding: 1rem 1.25rem;
-        background: rgba(255,255,255,0.6);
+        background: rgba(128,128,128,0.05);
         border-radius: 14px;
         margin-bottom: 0.6rem;
-        border: 1px solid rgba(226, 232, 240, 0.6);
+        border: 1px solid rgba(128,128,128,0.08);
         transition: all 0.2s ease;
         gap: 1rem;
     }
     .res-row:hover {
-        background: rgba(255,255,255,0.95);
+        background: rgba(128,128,128,0.1);
         box-shadow: 0 4px 12px rgba(0,0,0,0.04);
         transform: translateX(4px);
     }
@@ -217,7 +184,7 @@ st.markdown("""
         font-weight: 700;
         font-size: 0.85rem;
         color: #4f46e5;
-        background: #eef2ff;
+        background: rgba(79,70,229,0.1);
         padding: 0.35rem 0.75rem;
         border-radius: 8px;
         text-align: center;
@@ -225,7 +192,6 @@ st.markdown("""
     .res-name {
         flex: 1;
         font-weight: 600;
-        color: #1e293b;
         font-size: 0.95rem;
     }
     .res-meta {
@@ -237,19 +203,14 @@ st.markdown("""
         font-size: 0.7rem;
         padding: 0.2rem 0.6rem;
         border-radius: 6px;
-        background: #f1f5f9;
-        color: #475569;
+        background: rgba(128,128,128,0.1);
         font-weight: 500;
     }
-    .res-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
 
-    /* ── Detail Card (read-only) ── */
+    /* ── Detail Card ── */
     .detail-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        border: 1px solid #e2e8f0;
+        background: rgba(128,128,128,0.06);
+        border: 1px solid rgba(128,128,128,0.1);
         border-radius: 20px;
         padding: 1.75rem;
         margin-bottom: 1rem;
@@ -281,12 +242,11 @@ st.markdown("""
     .detail-name {
         font-size: 1.25rem;
         font-weight: 700;
-        color: #0f172a;
         margin-top: 0.25rem;
     }
     .detail-activity {
         font-size: 0.9rem;
-        color: #64748b;
+        color: #94a3b8;
         margin-top: 0.25rem;
     }
     .detail-grid {
@@ -296,7 +256,7 @@ st.markdown("""
         margin-top: 1rem;
     }
     .detail-item {
-        background: #f8fafc;
+        background: rgba(128,128,128,0.08);
         padding: 0.6rem 0.8rem;
         border-radius: 10px;
         font-size: 0.8rem;
@@ -311,14 +271,13 @@ st.markdown("""
     }
     .detail-item-value {
         font-weight: 600;
-        color: #334155;
     }
 
     /* ── Form Section ── */
     .form-section {
-        background: rgba(255,255,255,0.8);
+        background: rgba(128,128,128,0.06);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(226, 232, 240, 0.8);
+        border: 1px solid rgba(128,128,128,0.1);
         border-radius: 20px;
         padding: 2rem;
         margin-bottom: 1.5rem;
@@ -326,7 +285,6 @@ st.markdown("""
     .form-section-title {
         font-size: 1rem;
         font-weight: 700;
-        color: #0f172a;
         margin-bottom: 1.25rem;
         display: flex;
         align-items: center;
@@ -336,7 +294,7 @@ st.markdown("""
         content: '';
         flex: 1;
         height: 1px;
-        background: linear-gradient(90deg, #e2e8f0, transparent);
+        background: linear-gradient(90deg, rgba(128,128,128,0.2), transparent);
         margin-left: 0.5rem;
     }
 
@@ -361,8 +319,8 @@ st.markdown("""
         padding-top: 1.5rem;
     }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0;
-        background: rgba(255,255,255,0.5);
+        gap: 8px;
+        background: rgba(128,128,128,0.08);
         border-radius: 16px;
         padding: 6px;
         backdrop-filter: blur(10px);
@@ -372,17 +330,18 @@ st.markdown("""
         border-radius: 12px;
         background: transparent;
         border: none;
-        color: #64748b;
+        color: #94a3b8;
         font-weight: 600;
         font-size: 0.9rem;
         transition: all 0.2s ease;
+        margin: 0 2px;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        color: #0f172a;
-        background: rgba(255,255,255,0.3);
+        color: inherit;
+        background: rgba(128,128,128,0.1);
     }
     .stTabs [aria-selected="true"] {
-        background: #ffffff !important;
+        background: rgba(128,128,128,0.15) !important;
         color: #4f46e5 !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
@@ -407,9 +366,9 @@ st.markdown("""
 
     /* Expander override */
     div[data-testid="stExpander"] {
-        border: 1px solid #e2e8f0 !important;
+        border: 1px solid rgba(128,128,128,0.12) !important;
         border-radius: 16px !important;
-        background: rgba(255,255,255,0.6) !important;
+        background: rgba(128,128,128,0.04) !important;
         margin-bottom: 0.75rem !important;
     }
     div[data-testid="stExpanderDetails"] {
@@ -422,7 +381,6 @@ st.markdown("""
     div[data-testid="stTimeInput"] label {
         font-size: 0.8rem !important;
         font-weight: 600 !important;
-        color: #475569 !important;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
@@ -448,14 +406,12 @@ def format_date_fr(d):
 
 
 def time_to_minutes(t):
-    """Convertit un objet time en minutes depuis minuit."""
     if t is None:
         return None
     return t.hour * 60 + t.minute
 
 
 def parse_horaire_minutes(horaire_str):
-    """Parse une chaîne horaire et retourne (debut_min, fin_min)."""
     if not horaire_str:
         return None, None
     try:
@@ -467,20 +423,21 @@ def parse_horaire_minutes(horaire_str):
 
 
 def render_timeline(occupations, start_hour=8, end_hour=23):
-    """Génère une timeline visuelle HTML des occupations."""
+    """Timeline en flexbox — pas de position:absolute."""
     if not occupations:
-        return '<div style="text-align:center; color:#94a3b8; padding:2rem;">Aucune occupation sur ce créneau</div>'
+        return '<div style="text-align:center; padding:2rem; color:#94a3b8;">Aucune occupation sur ce créneau</div>'
 
     total_min = (end_hour - start_hour) * 60
-    colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6']
+    colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6']
 
-    slots_html = []
+    segments = []
+    current_min = 0
+
     for i, occ in enumerate(occupations):
         debut_min, fin_min = parse_horaire_minutes(occ.get('horaire', ''))
         if debut_min is None:
             continue
 
-        # Gérer le cas overnight
         if fin_min is not None and fin_min < debut_min:
             fin_min += 24 * 60
 
@@ -491,29 +448,42 @@ def render_timeline(occupations, start_hour=8, end_hour=23):
         if duration <= 0:
             duration = 60
 
-        left_pct = (rel_start / total_min) * 100
-        width_pct = (duration / total_min) * 100
-        color = colors[i % len(colors)]
-        name = occ.get('occupant', 'Inconnu')[:12]
+        # Empty space before
+        empty_before = rel_start - current_min
+        if empty_before > 0:
+            empty_pct = (empty_before / total_min) * 100
+            segments.append(f'<div class="timeline-empty" style="flex: 0 0 {empty_pct}%;"></div>')
 
-        slots_html.append(
+        # Occupation slot
+        slot_pct = (duration / total_min) * 100
+        color = colors[i % len(colors)]
+        name = occ.get('occupant', 'Inconnu')[:14]
+
+        segments.append(
             f'<div class="timeline-slot" '
-            f'style="left: calc({left_pct}% + 2rem); '
-            f'width: calc({width_pct}% - 4px); background: {color};">'
+            f'style="flex: 0 0 {slot_pct}%; background: {color};" '
+            f'title="{occ.get("occupant", "")} — {occ.get("horaire", "")}">'
             f'{name}</div>'
         )
 
+        current_min = rel_end
+
+    # Empty space after
+    if current_min < total_min:
+        empty_after = total_min - current_min
+        empty_pct = (empty_after / total_min) * 100
+        segments.append(f'<div class="timeline-empty" style="flex: 0 0 {empty_pct}%;"></div>')
+
     labels = []
     for h in range(start_hour, end_hour + 1, 2):
-        pos = ((h - start_hour) / (end_hour - start_hour)) * 100
-        labels.append(f'<span style="position:absolute; left:{pos}%;">{h}h</span>')
+        labels.append(f'<span>{h}h</span>')
 
     return f"""
-    <div class="timeline-container animate-in">
-        <div class="timeline-track">
-            {''.join(slots_html)}
+    <div class="animate-in">
+        <div class="timeline-bar">
+            {''.join(segments)}
         </div>
-        <div class="timeline-labels" style="position:relative; height:20px;">
+        <div class="timeline-labels">
             {''.join(labels)}
         </div>
     </div>
@@ -521,7 +491,6 @@ def render_timeline(occupations, start_hour=8, end_hour=23):
 
 
 def render_detail_card(occ):
-    """Rendu HTML d'une carte de détail moderne."""
     horaire = occ.get("horaire", "Horaire non précisé")
     occupant = occ.get("occupant", "Non précisé")
     activite = occ.get("activite", "")
@@ -555,8 +524,7 @@ def render_detail_card(occ):
     """
 
 
-def render_reservation_row(occ, idx, editable=True):
-    """Rendu HTML d'une ligne de réservation (style tableau)."""
+def render_reservation_row(occ, idx):
     horaire = occ.get("horaire", "—")
     occupant = occ.get("occupant", "Non précisé")
     salle = occ.get("salle", "")
@@ -602,11 +570,11 @@ def init_checker():
 
 
 # ═══════════════════════════════════════════════════════════
-# SIDEBAR
+# SIDEBAR — Fonctionnelle
 # ═══════════════════════════════════════════════════════════
-def render_sidebar():
+def render_sidebar(checker):
     with st.sidebar:
-        # Logo zone
+        # Logo
         st.markdown("""
         <div style="padding: 1rem 0 2rem 0; text-align: center;">
             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏢</div>
@@ -617,10 +585,11 @@ def render_sidebar():
 
         st.markdown("<hr style='border-color: #334155; margin: 1rem 0;'>", unsafe_allow_html=True)
 
-        # Navigation contextuelle
-        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Navigation</div>", unsafe_allow_html=True)
+        # ── Paramètres rapides ──
+        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Paramètres rapides</div>", unsafe_allow_html=True)
 
-        # Quick selectors (persisted in session state for cross-tab use)
+        st.caption("Ces valeurs sont préremplies dans les deux onglets")
+
         if "global_salle" not in st.session_state:
             st.session_state.global_salle = "Salle principale"
         if "global_date" not in st.session_state:
@@ -650,39 +619,104 @@ def render_sidebar():
         st.session_state.global_salle = sidebar_salle
         st.session_state.global_date = sidebar_date
 
+        # Boutons rapides
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("📅 Aujourd'hui", use_container_width=True):
+                st.session_state.global_date = datetime.now().date()
+                st.rerun()
+        with c2:
+            if st.button("📅 Demain", use_container_width=True):
+                st.session_state.global_date = (datetime.now() + timedelta(days=1)).date()
+                st.rerun()
+
         st.markdown("<hr style='border-color: #334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
 
-        # Status mini
-        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Aujourd'hui</div>", unsafe_allow_html=True)
-        today = datetime.now().date()
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem;">
-            <div style="font-size: 0.7rem; color: #94a3b8; margin-bottom: 0.25rem;">DATE</div>
-            <div style="font-size: 0.95rem; font-weight: 600; color: #f1f5f9;">{format_date_fr(today)}</div>
+        # ── Statut des salles — maintenant ──
+        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Statut actuel</div>", unsafe_allow_html=True)
+
+        now = datetime.now()
+        now_time = now.time()
+
+        for salle_name in salle_options:
+            try:
+                result = checker.check_availability(salle_name.lower(), now.date(), now_time)
+                is_libre = result.get("libre", False)
+                occs = result.get("occupations", [])
+
+                if is_libre or not occs:
+                    status_color = "#10b981"
+                    status_text = "LIBRE"
+                else:
+                    status_color = "#ef4444"
+                    status_text = "OCCUPÉE"
+
+                next_info = ""
+                if occs and not is_libre:
+                    next_info = occs[0].get("horaire", "")
+                elif occs:
+                    next_info = f"{len(occs)} occupation(s)"
+
+                st.markdown(f"""
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="font-size: 0.85rem; color: #e2e8f0; font-weight: 500;">{salle_name}</div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.75rem; font-weight: 700; color: {status_color};">{status_text}</div>
+                        <div style="font-size: 0.65rem; color: #64748b;">{next_info}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+        st.markdown("<hr style='border-color: #334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+
+        # ── Raccourcis ──
+        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Raccourcis</div>", unsafe_allow_html=True)
+
+        GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
+        if not GOOGLE_SHEET_ID:
+            try:
+                GOOGLE_SHEET_ID = st.secrets.get("app_config", {}).get("google_sheet_id", "")
+            except Exception:
+                GOOGLE_SHEET_ID = ""
+
+        if GOOGLE_SHEET_ID:
+            sheet_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/edit"
+            st.markdown(f'''
+            <a href="{sheet_url}" target="_blank" style="display: block; text-decoration: none; margin-bottom: 0.5rem;">
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #94a3b8; font-weight: 500; transition: all 0.2s;">
+                    📊 Ouvrir Google Sheet →
+                </div>
+            </a>
+            ''', unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #94a3b8; font-weight: 500;">
+            📁 Gestion de Salle → Lecture seule, recherche par date/heure
+        </div>
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-top: 0.5rem;">
+            ✏️ Planning → Ajouter, modifier, supprimer des réservations
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<div style='position: fixed; bottom: 1.5rem; left: 1.5rem; right: 1.5rem;'>", unsafe_allow_html=True)
+        # Footer
+        st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
         st.markdown("""
         <div style="text-align: center; font-size: 0.7rem; color: #475569;">
             CFPDC © 2024<br>
-            <span style="color: #334155;">v2.0 — Dashboard</span>
+            <span style="color: #334155;">v2.1 — Dashboard Pro</span>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════
 # ONGLET 1 — DASHBOARD GESTION DE SALLE
 # ═══════════════════════════════════════════════════════════
 def onglet_gestion_salle(checker):
-    """Vue dashboard lecture seule avec timeline et KPI."""
-
-    # Utiliser les valeurs globales de la sidebar comme défaut
     default_salle = st.session_state.get("global_salle", "Salle principale")
     default_date = st.session_state.get("global_date", datetime.now().date())
 
-    # ── Zone de contrôle ──
     st.markdown("<div class='form-section'>", unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([2, 2, 1])
@@ -715,10 +749,8 @@ def onglet_gestion_salle(checker):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Bouton principal
     verify_clicked = st.button("Analyser la disponibilité", use_container_width=True, type="primary", key="gs_verify")
 
-    # ── Exécution de la recherche ──
     if verify_clicked or 'gs_occupations' in st.session_state:
         if verify_clicked:
             with st.spinner("Analyse en cours..."):
@@ -741,7 +773,6 @@ def onglet_gestion_salle(checker):
                     st.error(f"Erreur lors de la vérification : {str(e)}")
                     st.session_state.gs_occupations = []
 
-        # ── KPI Cards ──
         if 'gs_occupations' in st.session_state:
             occupations = st.session_state.gs_occupations
             is_libre = st.session_state.get("gs_is_libre", False)
@@ -810,24 +841,23 @@ def onglet_gestion_salle(checker):
                 </div>
                 """, unsafe_allow_html=True)
 
-            # ── Timeline ──
+            # Timeline
             st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
             st.markdown("### Timeline des occupations")
             st.markdown(render_timeline(occupations), unsafe_allow_html=True)
 
-            # ── Détails ──
+            # Détails
             if occupations:
                 st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
                 st.markdown("### Détails des occupations")
-
                 for occ in occupations:
                     st.markdown(render_detail_card(occ), unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <div style="text-align: center; padding: 3rem 1rem; color: #64748b;">
+                <div style="text-align: center; padding: 3rem 1rem;">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-                    <div style="font-size: 1.1rem; font-weight: 600; color: #0f172a;">La salle est entièrement libre</div>
-                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">Aucune occupation prévue pour cette journée</div>
+                    <div style="font-size: 1.1rem; font-weight: 600;">La salle est entièrement libre</div>
+                    <div style="font-size: 0.9rem; margin-top: 0.5rem; color: #94a3b8;">Aucune occupation prévue pour cette journée</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -836,20 +866,16 @@ def onglet_gestion_salle(checker):
 # ONGLET 2 — PLANNING & RÉSERVATIONS
 # ═══════════════════════════════════════════════════════════
 def onglet_editer_planning(checker):
-    """Vue planning avec data grid et édition."""
-
     default_salle = st.session_state.get("global_salle", "Salle principale")
     default_date = st.session_state.get("global_date", datetime.now().date())
 
-    # ── En-tête ──
     st.markdown("""
     <div style="margin-bottom: 1.5rem;">
-        <h2 style="margin: 0; font-size: 1.4rem; color: #0f172a;">Planning de Réservation</h2>
-        <p style="color: #64748b; margin-top: 0.25rem; font-size: 0.9rem;">Gérez les réservations ponctuelles du Google Sheet</p>
+        <h2 style="margin: 0; font-size: 1.4rem;">Planning de Réservation</h2>
+        <p style="color: #94a3b8; margin-top: 0.25rem; font-size: 0.9rem;">Gérez les réservations ponctuelles du Google Sheet</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Contrôles ──
     st.markdown("<div class='form-section'>", unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([2, 2, 1])
@@ -874,7 +900,6 @@ def onglet_editer_planning(checker):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Recherche ──
     needs_search = st.session_state.get("ep_needs_search", False)
     if search_clicked or 'ep_occupations' in st.session_state or needs_search:
         if search_clicked or needs_search:
@@ -898,7 +923,6 @@ def onglet_editer_planning(checker):
                     st.error(f"Erreur : {str(e)}")
                     st.session_state.ep_occupations = []
 
-    # ── Messages flash ──
     if st.session_state.get("ep_edit_success"):
         st.success(st.session_state.ep_edit_success)
         st.session_state.ep_edit_success = None
@@ -908,7 +932,6 @@ def onglet_editer_planning(checker):
         st.session_state.ep_edit_error = None
         st.session_state.ep_edit_success = None
 
-    # ── Affichage résultats ──
     if 'ep_occupations' in st.session_state:
         occupations = st.session_state.ep_occupations
         current_salle = st.session_state.get("ep_res_salle", ep_salle)
@@ -917,20 +940,17 @@ def onglet_editer_planning(checker):
         if not occupations:
             st.info(f"Aucune réservation ponctuelle pour **{current_salle}** le **{format_date_fr(current_date)}**.")
         else:
-            # Header du tableau
             st.markdown(f"""
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+                <div style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">
                     {len(occupations)} réservation(s)
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Data grid en rows stylisées
             for idx, occ in enumerate(occupations):
                 st.markdown(render_reservation_row(occ, idx), unsafe_allow_html=True)
 
-                # Expandable edit form
                 with st.expander("Modifier"):
                     with st.form(key=f"ep_edit_form_{idx}", border=False):
                         ec1, ec2, ec3 = st.columns(3)
@@ -1009,7 +1029,6 @@ def onglet_editer_planning(checker):
 
     st.markdown("<div style='margin: 2rem 0;'></div>", unsafe_allow_html=True)
 
-    # ── Messages flash ajout ──
     add_success_msg = st.session_state.get("ep_add_success")
     if add_success_msg:
         st.success(add_success_msg)
@@ -1020,10 +1039,9 @@ def onglet_editer_planning(checker):
         st.session_state.ep_add_error = None
         st.session_state.ep_add_success = False
 
-    # ── Ajouter une réservation ──
     st.markdown("""
     <div style="margin-bottom: 1rem;">
-        <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">Nouvelle réservation</h3>
+        <h3 style="margin: 0; font-size: 1.1rem;">Nouvelle réservation</h3>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1094,26 +1112,22 @@ def onglet_editer_planning(checker):
 # MAIN
 # ═══════════════════════════════════════════════════════════
 def main():
-    # Sidebar
-    render_sidebar()
-
-    # Header principal
-    st.markdown("""
-    <div style="margin-bottom: 2rem;">
-        <h1 style="font-size: 1.8rem; color: #0f172a; margin: 0;">Tableau de bord</h1>
-        <p style="color: #64748b; margin-top: 0.35rem; font-size: 0.95rem;">
-            Gestion des salles et réservations — CFPDC
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Initialiser checker
     checker = init_checker()
     if checker is None:
         st.error("Dossier 'salles/' introuvable. Vérifiez l'installation.")
         st.stop()
 
-    # Onglets modernes
+    render_sidebar(checker)
+
+    st.markdown("""
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 1.8rem; margin: 0;">Tableau de bord</h1>
+        <p style="color: #94a3b8; margin-top: 0.35rem; font-size: 0.95rem;">
+            Gestion des salles et réservations — CFPDC
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     tab1, tab2 = st.tabs(["Gestion de Salle", "Planning & Réservations"])
 
     with tab1:
