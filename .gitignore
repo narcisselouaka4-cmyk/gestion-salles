@@ -1,5 +1,6 @@
 # Credentials et secrets
 credentials.json
+gcp_credentials.json
 .streamlit/secrets.toml
 .env
 .env.local
