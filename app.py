@@ -32,7 +32,7 @@ st.set_page_config(
 # ═══════════════════════════════════════════════════════════
 # PWA MANIFEST (injection dans le <head>)
 # ═══════════════════════════════════════════════════════════
-components.html("""
+st.markdown("""
 <script>
     // Manifest PWA
     if (!document.querySelector('link[rel="manifest"]')) {
@@ -56,7 +56,7 @@ components.html("""
         document.head.appendChild(icon);
     }
 </script>
-""", height=0)
+""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════
 # CSS MODERNE — Design System SaaS (Light & Dark compatible)

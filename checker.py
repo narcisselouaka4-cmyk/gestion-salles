@@ -285,97 +285,76 @@ class SalleChecker:
         except Exception as e:
             return None, f"Erreur connexion Google Sheets: {str(e)}"
 
-    def _load_salle_data(self, salle_name: str):
-        """Charge les données d'un fichier de salle avec mise en cache."""
-        if salle_name in self._salles_cache:
-            return self._salles_cache[salle_name]
+    def _load_salle_workbook(self, salle_name: str):
+        """
+        Charge le workbook d'une salle (sans data_only) et met en cache à la fois
+        les données et le mapping couleur -> occupant.
+        Retourne (data_rows, occupant_map).
+        """
+        if salle_name in self._salles_cache and salle_name in self._color_map_cache:
+            return self._salles_cache[salle_name], self._color_map_cache[salle_name]
 
         file_path = self.salles_files.get(salle_name)
         if not file_path:
-            return []
+            return [], {}
 
         try:
-            wb = load_workbook(file_path, data_only=True)
-            ws = wb.active
-
-            # Convertir en liste de lignes pour le cache
-            data = list(ws.iter_rows(values_only=True))
-            self._salles_cache[salle_name] = data
-            return data
-        except Exception as e:
-            print(f"Erreur chargement {file_path}: {e}")
-            return []
-
-    def _build_color_occupant_map(self, salle_name: str) -> dict:
-        """
-        Construit un mapping ligne -> nom d'occupant en se basant sur la couleur
-        de fond des cellules N (colonne 14) et O (colonne 15).
-
-        Règle métier :
-        - Les cellules N/O avec un fond gris (FF999999) délimitent un bloc d'occupation.
-        - Toutes les lignes d'un même bloc gris appartiennent au premier nom trouvé
-          dans ce bloc (colonnes N ou O).
-        - Une ligne blanche (ni N ni O gris) n'a pas d'occupant.
-        - Un bloc gris sans nom ne représente pas d'occupation.
-
-        Retourne un dict {row_index_0based: nom_occupant}.
-        """
-        if salle_name in self._color_map_cache:
-            return self._color_map_cache[salle_name]
-
-        file_path = self.salles_files.get(salle_name)
-        if not file_path:
-            return {}
-
-        try:
-            # Charger sans data_only pour accéder aux styles/couleurs
+            # Charger sans data_only pour accéder aux styles/couleurs ET aux valeurs brutes
             wb = load_workbook(file_path, data_only=False)
             ws = wb.active
 
+            data = []
             occupant_map = {}
             current_block_name = None
             in_gray_block = False
 
             for i, row in enumerate(ws.iter_rows(values_only=True)):
-                # Accéder aux cellules N (colonne 14) et O (colonne 15)
+                data.append(row)
+
+                # Couleur des cellules N (colonne 14) et O (colonne 15)
                 cell_n = ws.cell(row=i + 1, column=14)
                 cell_o = ws.cell(row=i + 1, column=15)
 
                 color_n = self._cell_bg_color(cell_n)
                 color_o = self._cell_bg_color(cell_o)
-
                 is_gray = color_n == "FF999999" or color_o == "FF999999"
 
                 if is_gray:
                     if not in_gray_block:
-                        # Début d'un nouveau bloc gris
                         in_gray_block = True
                         current_block_name = None
 
                     # Chercher un nom dans N ou O
-                    val_n = cell_n.value
-                    val_o = cell_o.value
-                    for val in (val_n, val_o):
+                    for val in (cell_n.value, cell_o.value):
                         if val is not None:
                             name = str(val).strip()
                             if name and current_block_name is None:
                                 current_block_name = name
                                 break
 
-                    # Assigner le nom du bloc à cette ligne si on en a un
                     if current_block_name:
                         occupant_map[i] = current_block_name
                 else:
-                    # Ligne blanche : pas d'occupant
                     in_gray_block = False
                     current_block_name = None
 
+            self._salles_cache[salle_name] = data
             self._color_map_cache[salle_name] = occupant_map
-            return occupant_map
+            return data, occupant_map
 
         except Exception as e:
-            print(f"Erreur chargement couleurs {file_path}: {e}")
-            return {}
+            print(f"Erreur chargement {file_path}: {e}")
+            return [], {}
+
+    def _load_salle_data(self, salle_name: str):
+        """Charge les données d'un fichier de salle avec mise en cache."""
+        data, _ = self._load_salle_workbook(salle_name)
+        return data
+
+    def _build_color_occupant_map(self, salle_name: str) -> dict:
+        """Retourne le mapping ligne -> occupant basé sur la couleur des cellules N/O."""
+        _, occupant_map = self._load_salle_workbook(salle_name)
+        return occupant_map
 
     def _cell_bg_color(self, cell) -> str:
         """Retourne la couleur de fond d'une cellule sous forme de chaîne RGBA."""
@@ -384,7 +363,6 @@ class SalleChecker:
         color = cell.fill.start_color
         if color is None:
             return "00000000"
-        # openpyxl peut retourner '00000000' pour transparent/blanc
         rgb = color.rgb
         return str(rgb) if rgb else "00000000"
 
