@@ -61,3 +61,7 @@ conv_claude_code
 
 # Dossier de backup local (ne pas commiter)
 SECRETS_BACKUP/
+salles_backup_*/
+salles_archive_old/
+checker_backup_*.py
+google_sheet_backup_*.xlsx

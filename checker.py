@@ -162,9 +162,9 @@ class SalleChecker:
     def __init__(self, salles_dir: str, google_sheet_id: str = None):
         self.salles_dir = salles_dir
         self.salles_files = {
-            "salle principale": f"{salles_dir}/SALLE_PRINCIPALE.xlsx",
-            "salle du fond": f"{salles_dir}/SALLE_DU_FOND.xlsx",
-            "salle du milieu": f"{salles_dir}/Salle_du_Milieu.xlsx",
+            "salle principale": f"{salles_dir}/SALLE PRINCIPALE.xlsx",
+            "salle du fond": f"{salles_dir}/SALLE DU FOND.xlsx",
+            "salle du milieu": f"{salles_dir}/Salle du Milieu.xlsx",
         }
 
         # ID du Google Sheet pour les réservations (optionnel)
@@ -173,6 +173,8 @@ class SalleChecker:
 
         # Cache pour les fichiers de salles (stables)
         self._salles_cache = {}
+        # Cache pour le mapping couleur -> occupant (stables)
+        self._color_map_cache = {}
 
     def _get_google_client(self):
         """
@@ -304,34 +306,87 @@ class SalleChecker:
             print(f"Erreur chargement {file_path}: {e}")
             return []
 
-    def _build_name_index(self, rows) -> dict:
+    def _build_color_occupant_map(self, salle_name: str) -> dict:
         """
-        Pré-indexe toutes les lignes qui ont un nom en colonne N (index 13).
+        Construit un mapping ligne -> nom d'occupant en se basant sur la couleur
+        de fond des cellules N (colonne 14) et O (colonne 15).
+
+        Règle métier :
+        - Les cellules N/O avec un fond gris (FF999999) délimitent un bloc d'occupation.
+        - Toutes les lignes d'un même bloc gris appartiennent au premier nom trouvé
+          dans ce bloc (colonnes N ou O).
+        - Une ligne blanche (ni N ni O gris) n'a pas d'occupant.
+        - Un bloc gris sans nom ne représente pas d'occupation.
+
         Retourne un dict {row_index_0based: nom_occupant}.
         """
-        name_index = {}
-        for i, row in enumerate(rows):
-            if row and len(row) > 13 and row[13] is not None:
-                name = str(row[13]).strip()
-                if name:
-                    name_index[i] = name
-        return name_index
+        if salle_name in self._color_map_cache:
+            return self._color_map_cache[salle_name]
 
-    def _find_closest_occupant(self, row_idx: int, name_index: dict) -> str:
-        """
-        Retourne le nom de l'occupant dont la ligne est la plus proche de row_idx.
-        """
-        if not name_index:
-            return "Inconnu"
+        file_path = self.salles_files.get(salle_name)
+        if not file_path:
+            return {}
 
-        # Vérifier la distance maximale (20 lignes)
-        closest_row = min(name_index.keys(), key=lambda r: abs(r - row_idx))
-        distance = abs(closest_row - row_idx)
+        try:
+            # Charger sans data_only pour accéder aux styles/couleurs
+            wb = load_workbook(file_path, data_only=False)
+            ws = wb.active
 
-        if distance > 20:
-            return "Occupant non identifié"
+            occupant_map = {}
+            current_block_name = None
+            in_gray_block = False
 
-        return name_index[closest_row]
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                # Accéder aux cellules N (colonne 14) et O (colonne 15)
+                cell_n = ws.cell(row=i + 1, column=14)
+                cell_o = ws.cell(row=i + 1, column=15)
+
+                color_n = self._cell_bg_color(cell_n)
+                color_o = self._cell_bg_color(cell_o)
+
+                is_gray = color_n == "FF999999" or color_o == "FF999999"
+
+                if is_gray:
+                    if not in_gray_block:
+                        # Début d'un nouveau bloc gris
+                        in_gray_block = True
+                        current_block_name = None
+
+                    # Chercher un nom dans N ou O
+                    val_n = cell_n.value
+                    val_o = cell_o.value
+                    for val in (val_n, val_o):
+                        if val is not None:
+                            name = str(val).strip()
+                            if name and current_block_name is None:
+                                current_block_name = name
+                                break
+
+                    # Assigner le nom du bloc à cette ligne si on en a un
+                    if current_block_name:
+                        occupant_map[i] = current_block_name
+                else:
+                    # Ligne blanche : pas d'occupant
+                    in_gray_block = False
+                    current_block_name = None
+
+            self._color_map_cache[salle_name] = occupant_map
+            return occupant_map
+
+        except Exception as e:
+            print(f"Erreur chargement couleurs {file_path}: {e}")
+            return {}
+
+    def _cell_bg_color(self, cell) -> str:
+        """Retourne la couleur de fond d'une cellule sous forme de chaîne RGBA."""
+        if cell is None or cell.fill is None:
+            return "00000000"
+        color = cell.fill.start_color
+        if color is None:
+            return "00000000"
+        # openpyxl peut retourner '00000000' pour transparent/blanc
+        rgb = color.rgb
+        return str(rgb) if rgb else "00000000"
 
     def check_fixed_schedule(self, salle_name: str, d: date, time_requested: time) -> list:
         """
@@ -344,8 +399,8 @@ class SalleChecker:
         if not rows:
             return results
 
-        # Construire l'index des noms d'occupants
-        name_index = self._build_name_index(rows)
+        # Mapping ligne -> occupant basé sur la couleur des cellules N/O
+        occupant_map = self._build_color_occupant_map(salle_name)
 
         # Déterminer le jour de la semaine
         day_name = PYTHON_WEEKDAY_TO_FR[d.weekday()]
@@ -366,18 +421,16 @@ class SalleChecker:
                 in_5th_week_section = True
                 continue
 
-            # Si la ligne a un nom, on reste dans le bloc, sinon on continue
-            # Le nom est trouvé via _find_closest_occupant
+            # Occupant déterminé par la couleur des cellules N/O
+            occupant = occupant_map.get(i)
+            if occupant is None:
+                continue
 
             # Déterminer la cellule jour à vérifier
             day_in_cell = None
 
             # Vérifier si la ligne a une valeur dans au moins une colonne semaine
             has_any_week_col = any(row[col] is not None for col in WEEK_COLS if col < len(row))
-
-            # Vérifier si la ligne a un nom (colonne N = index 13)
-            # Si oui, c'est une ligne de déclaration de bloc, pas une entrée de réservation
-            has_name = len(row) > 13 and row[13] is not None and str(row[13]).strip()
 
             if has_any_week_col:
                 # Entrée régulière → ignorer in_5th_week_section
@@ -391,8 +444,7 @@ class SalleChecker:
             else:
                 # Ligne sans colonne semaine → section "EN PLUS DES MOIS DE 5 DIMANCHES"
                 # Cette section ne concerne que les DIMANCHES de la 5ème semaine
-                if in_5th_week_section and week_number == 5 and not has_name and day_name == "dimanche":
-                    # Ces entrées s'appliquent uniquement aux dimanches de la 5ème semaine
+                if in_5th_week_section and week_number == 5 and day_name == "dimanche":
                     day_in_cell = day_name  # Force le match
                 else:
                     day_in_cell = None
@@ -405,9 +457,6 @@ class SalleChecker:
                 cell_day = normalize_day(str(day_in_cell))
                 if cell_day != day_name:
                     continue
-
-            # Trouver le nom de l'occupant le plus proche
-            occupant = self._find_closest_occupant(i, name_index)
 
             # Extraire activité (colonne I = index 8) et horaire (colonne M = index 12)
             activite = str(row[8]).strip() if len(row) > 8 and row[8] else "Non précisée"
@@ -715,8 +764,8 @@ class SalleChecker:
         if not rows:
             return results
 
-        # Construire l'index des noms d'occupants
-        name_index = self._build_name_index(rows)
+        # Mapping ligne -> occupant basé sur la couleur des cellules N/O
+        occupant_map = self._build_color_occupant_map(salle_name)
 
         day_name = PYTHON_WEEKDAY_TO_FR[d.weekday()]
         week_number = nth_occurrence_in_month(d)
@@ -733,13 +782,15 @@ class SalleChecker:
                 in_5th_week_section = True
                 continue
 
+            # Occupant déterminé par la couleur des cellules N/O
+            occupant = occupant_map.get(i)
+            if occupant is None:
+                continue
+
             day_in_cell = None
 
             # Vérifier si la ligne a une valeur dans au moins une colonne semaine
             has_any_week_col = any(row[col] is not None for col in WEEK_COLS if col < len(row))
-
-            # Vérifier si la ligne a un nom (colonne N = index 13)
-            has_name = len(row) > 13 and row[13] is not None and str(row[13]).strip()
 
             if has_any_week_col:
                 # Entrée régulière
@@ -754,7 +805,7 @@ class SalleChecker:
             else:
                 # Ligne sans colonne semaine → section "EN PLUS DES MOIS DE 5 DIMANCHES"
                 # Cette section ne concerne que les DIMANCHES de la 5ème semaine
-                if in_5th_week_section and week_number == 5 and not has_name and day_name == "dimanche":
+                if in_5th_week_section and week_number == 5 and day_name == "dimanche":
                     day_in_cell = day_name
                 else:
                     day_in_cell = None
@@ -766,9 +817,6 @@ class SalleChecker:
                 cell_day = normalize_day(str(day_in_cell))
                 if cell_day != day_name:
                     continue
-
-            # Trouver le nom de l'occupant le plus proche
-            occupant = self._find_closest_occupant(i, name_index)
 
             activite = str(row[8]).strip() if len(row) > 8 and row[8] else "Non précisée"
             horaire_str = str(row[12]).strip() if len(row) > 12 and row[12] else None
