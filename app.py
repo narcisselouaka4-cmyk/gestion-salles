@@ -843,6 +843,7 @@ def onglet_gestion_salle(checker):
                     st.session_state.gs_res_salle = salle
                     st.session_state.gs_res_date_input = date_input
                     st.session_state.gs_overlaps = result.get("overlaps", [])
+                    st.session_state.gs_unprecise = result.get("unprecise", [])
 
                     if "error" in result:
                         st.toast("Connexion Google Sheets impossible — réservations non affichées", icon="⚠️")
@@ -857,6 +858,7 @@ def onglet_gestion_salle(checker):
             result_heure = st.session_state.get("gs_result_heure", heure)
             current_salle = st.session_state.get("gs_res_salle", salle)
             overlaps = st.session_state.get("gs_overlaps", [])
+            unprecise = st.session_state.get("gs_unprecise", [])
 
             # Avertissement en cas de chevauchement
             if overlaps:
@@ -868,6 +870,16 @@ def onglet_gestion_salle(checker):
                         st.markdown(
                             f"• **{first['occupant']}** ({first['horaire']}) chevauche "
                             f"**{second['occupant']}** ({second['horaire']})",
+                            unsafe_allow_html=True
+                        )
+
+            # Avertissement si des horaires ne sont pas precises
+            if unprecise:
+                with st.container():
+                    st.warning("⚠️ **Horaires non précisés** — le statut libre/occupé peut être incorrect")
+                    for u in unprecise:
+                        st.markdown(
+                            f"• **{u['occupant']}** : {u['horaire']}",
                             unsafe_allow_html=True
                         )
 
@@ -1008,6 +1020,7 @@ def onglet_editer_planning(checker):
                     st.session_state.ep_target_date = ep_date
                     st.session_state.ep_target_salle = ep_salle
                     st.session_state.ep_overlaps = result.get("overlaps", [])
+                    st.session_state.ep_unprecise = result.get("unprecise", [])
 
                     if "error" in result:
                         st.toast("Connexion Google Sheets impossible", icon="⚠️")
@@ -1029,6 +1042,7 @@ def onglet_editer_planning(checker):
         current_salle = st.session_state.get("ep_res_salle", ep_salle)
         current_date = st.session_state.get("ep_res_date", ep_date)
         ep_overlaps = st.session_state.get("ep_overlaps", [])
+        ep_unprecise = st.session_state.get("ep_unprecise", [])
 
         # Avertissement en cas de chevauchement
         if ep_overlaps:
@@ -1040,6 +1054,16 @@ def onglet_editer_planning(checker):
                     st.markdown(
                         f"• **{first['occupant']}** ({first['horaire']}) chevauche "
                         f"**{second['occupant']}** ({second['horaire']})",
+                        unsafe_allow_html=True
+                    )
+
+        # Avertissement si des horaires ne sont pas precises
+        if ep_unprecise:
+            with st.container():
+                st.warning("⚠️ **Horaires non précisés** — certains créneaux n'ont pas d'heure claire")
+                for u in ep_unprecise:
+                    st.markdown(
+                        f"• **{u['occupant']}** : {u['horaire']}",
                         unsafe_allow_html=True
                     )
 

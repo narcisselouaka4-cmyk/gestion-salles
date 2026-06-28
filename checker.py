@@ -1261,6 +1261,28 @@ class SalleChecker:
         """Convertit un objet time en minutes depuis minuit."""
         return t.hour * 60 + t.minute
 
+    def _find_unprecise_occupations(self, occupations: list) -> list:
+        """
+        Retourne les occupations dont l'horaire n'est pas numeriquement parseable
+        (debut=00:00, fin=23:59 et warning present).
+        """
+        unprecise = []
+        for occ in occupations:
+            debut = occ.get("debut")
+            fin = occ.get("fin")
+            if not isinstance(debut, time) or not isinstance(fin, time):
+                continue
+            is_full_day_placeholder = (
+                debut == time(0, 0) and fin == time(23, 59) and "warning" in occ
+            )
+            if is_full_day_placeholder:
+                unprecise.append({
+                    "occupant": occ.get("occupant", "Inconnu"),
+                    "horaire": occ.get("horaire", "—"),
+                    "source": occ.get("source", "")
+                })
+        return unprecise
+
     def _find_overlaps(self, occupations: list) -> list:
         """
         Détecte les occupations qui se chevauchent sur un même créneau horaire.
@@ -1334,11 +1356,14 @@ class SalleChecker:
         # Trier par heure de début
         all_occupations.sort(key=lambda x: x["debut"])
 
+        all_occupations.sort(key=lambda x: x["debut"])
+
         result = {
             "salle": salle_name,
             "date": d,
             "occupations": all_occupations,
-            "overlaps": self._find_overlaps(all_occupations)
+            "overlaps": self._find_overlaps(all_occupations),
+            "unprecise": self._find_unprecise_occupations(all_occupations)
         }
         if error:
             result["error"] = error
@@ -1366,7 +1391,8 @@ class SalleChecker:
             "date": d,
             "heure": time_requested,
             "occupations": all_occupations,
-            "overlaps": self._find_overlaps(all_occupations)
+            "overlaps": self._find_overlaps(all_occupations),
+            "unprecise": self._find_unprecise_occupations(all_occupations)
         }
         if error:
             result["error"] = error
