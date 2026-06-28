@@ -842,6 +842,7 @@ def onglet_gestion_salle(checker):
                     st.session_state.gs_result_heure = result.get("heure", heure)
                     st.session_state.gs_res_salle = salle
                     st.session_state.gs_res_date_input = date_input
+                    st.session_state.gs_overlaps = result.get("overlaps", [])
 
                     if "error" in result:
                         st.toast("Connexion Google Sheets impossible — réservations non affichées", icon="⚠️")
@@ -855,6 +856,20 @@ def onglet_gestion_salle(checker):
             result_date = st.session_state.get("gs_result_date", date_input)
             result_heure = st.session_state.get("gs_result_heure", heure)
             current_salle = st.session_state.get("gs_res_salle", salle)
+            overlaps = st.session_state.get("gs_overlaps", [])
+
+            # Avertissement en cas de chevauchement
+            if overlaps:
+                with st.container():
+                    st.warning("⚠️ **Conflits d'horaire détectés**")
+                    for overlap in overlaps:
+                        first = overlap["first"]
+                        second = overlap["second"]
+                        st.markdown(
+                            f"• **{first['occupant']}** ({first['horaire']}) chevauche "
+                            f"**{second['occupant']}** ({second['horaire']})",
+                            unsafe_allow_html=True
+                        )
 
             kpi1, kpi2, kpi3 = st.columns(3)
 
@@ -992,6 +1007,7 @@ def onglet_editer_planning(checker):
                     st.session_state.ep_res_date = ep_date
                     st.session_state.ep_target_date = ep_date
                     st.session_state.ep_target_salle = ep_salle
+                    st.session_state.ep_overlaps = result.get("overlaps", [])
 
                     if "error" in result:
                         st.toast("Connexion Google Sheets impossible", icon="⚠️")
@@ -1012,6 +1028,20 @@ def onglet_editer_planning(checker):
         occupations = st.session_state.ep_occupations
         current_salle = st.session_state.get("ep_res_salle", ep_salle)
         current_date = st.session_state.get("ep_res_date", ep_date)
+        ep_overlaps = st.session_state.get("ep_overlaps", [])
+
+        # Avertissement en cas de chevauchement
+        if ep_overlaps:
+            with st.container():
+                st.warning("⚠️ **Conflits d'horaire détectés**")
+                for overlap in ep_overlaps:
+                    first = overlap["first"]
+                    second = overlap["second"]
+                    st.markdown(
+                        f"• **{first['occupant']}** ({first['horaire']}) chevauche "
+                        f"**{second['occupant']}** ({second['horaire']})",
+                        unsafe_allow_html=True
+                    )
 
         if not occupations:
             st.info(f"Aucune réservation ponctuelle pour **{current_salle}** le **{format_date_fr(current_date)}**.")

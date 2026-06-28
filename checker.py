@@ -1257,6 +1257,71 @@ class SalleChecker:
 
         return results, None
 
+    def _time_to_minutes(self, t: time) -> int:
+        """Convertit un objet time en minutes depuis minuit."""
+        return t.hour * 60 + t.minute
+
+    def _find_overlaps(self, occupations: list) -> list:
+        """
+        Détecte les occupations qui se chevauchent sur un même créneau horaire.
+        Retourne une liste de dicts {first, second, message}.
+
+        Les occupations avec un horaire non parseable (debut=00:00, fin=23:59 et warning)
+        ne sont pas comparees car on ne connait pas leur vrai creneau.
+        """
+        overlaps = []
+        if not occupations:
+            return overlaps
+
+        segments = []
+        for occ in occupations:
+            debut = occ.get("debut")
+            fin = occ.get("fin")
+            if not isinstance(debut, time) or not isinstance(fin, time):
+                continue
+
+            # Ignorer les occupations avec horaire non precise (00:00-23:59 + warning)
+            is_full_day_placeholder = (
+                debut == time(0, 0) and fin == time(23, 59) and "warning" in occ
+            )
+            if is_full_day_placeholder:
+                continue
+
+            start_min = self._time_to_minutes(debut)
+            end_min = self._time_to_minutes(fin)
+            # Gerer les creneaux overnight
+            if end_min <= start_min:
+                end_min += 24 * 60
+
+            segments.append({
+                "occupant": occ.get("occupant", "Inconnu"),
+                "horaire": occ.get("horaire", "—"),
+                "source": occ.get("source", ""),
+                "start_min": start_min,
+                "end_min": end_min,
+                "occ": occ
+            })
+
+        # Trier par heure de debut
+        segments.sort(key=lambda x: x["start_min"])
+
+        for i in range(len(segments)):
+            for j in range(i + 1, len(segments)):
+                a = segments[i]
+                b = segments[j]
+                # Chevauchement : a commence avant b finit ET b commence avant a finit
+                if a["start_min"] < b["end_min"] and b["start_min"] < a["end_min"]:
+                    overlaps.append({
+                        "first": a,
+                        "second": b,
+                        "message": (
+                            f"{a['occupant']} ({a['horaire']}) et "
+                            f"{b['occupant']} ({b['horaire']}) se chevauchent"
+                        )
+                    })
+
+        return overlaps
+
     def get_all_occupations(self, salle_name: str, d: date) -> dict:
         """
         Récupère TOUTES les occupations d'une journée (mode sans heure précise).
@@ -1272,7 +1337,8 @@ class SalleChecker:
         result = {
             "salle": salle_name,
             "date": d,
-            "occupations": all_occupations
+            "occupations": all_occupations,
+            "overlaps": self._find_overlaps(all_occupations)
         }
         if error:
             result["error"] = error
@@ -1299,7 +1365,8 @@ class SalleChecker:
             "salle": salle_name,
             "date": d,
             "heure": time_requested,
-            "occupations": all_occupations
+            "occupations": all_occupations,
+            "overlaps": self._find_overlaps(all_occupations)
         }
         if error:
             result["error"] = error
