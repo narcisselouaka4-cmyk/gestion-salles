@@ -7,6 +7,7 @@ import re
 import os
 import base64
 import json
+import time as time_module
 from datetime import datetime, time, date
 from openpyxl import load_workbook
 
@@ -175,6 +176,68 @@ class SalleChecker:
         self._salles_cache = {}
         # Cache pour le mapping couleur -> occupant (stables)
         self._color_map_cache = {}
+        # Cache TTL pour les valeurs Google Sheets (evite les quotas 429)
+        self._sheet_cache = {}
+        self._sheet_cache_time = {}
+        self._sheet_cache_ttl = 15  # secondes
+
+    def _get_worksheet_values_cached(self, worksheet_name: str):
+        """
+        Recupere les valeurs d'un worksheet Google Sheets avec cache TTL et retry.
+        Retourne (values, error).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return None, "Google Sheets non configure"
+
+        cache_key = f"{self.google_sheet_id}:{worksheet_name}"
+        now = time_module.time()
+
+        # Utiliser le cache si valide
+        if cache_key in self._sheet_cache:
+            cached_time = self._sheet_cache_time.get(cache_key, 0)
+            if now - cached_time < self._sheet_cache_ttl:
+                return self._sheet_cache[cache_key], None
+
+        try:
+            client, error = self._get_google_client()
+            if error or not client:
+                return None, error or "Client Google Sheets non initialise"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet(worksheet_name)
+            except gspread.exceptions.WorksheetNotFound:
+                worksheet = spreadsheet.get_worksheet(0)
+
+            # Retry en cas de quota exceeded (429)
+            max_retries = 3
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    values = worksheet.get_all_values()
+                    self._sheet_cache[cache_key] = values
+                    self._sheet_cache_time[cache_key] = now
+                    return values, None
+                except gspread.exceptions.APIError as api_err:
+                    last_error = api_err
+                    err_str = str(api_err)
+                    if "429" in err_str or "Quota exceeded" in err_str:
+                        wait = 2 ** attempt  # 1s, 2s, 4s
+                        print(f"[Google Sheets] Quota exceeded, retrying in {wait}s (attempt {attempt + 1}/{max_retries})")
+                        time_module.sleep(wait)
+                    else:
+                        raise
+
+            return None, f"Erreur lecture Google Sheets apres {max_retries} tentatives: {str(last_error)}"
+
+        except Exception as e:
+            return None, f"Erreur lecture Google Sheets: {str(e)}"
+
+    def _invalidate_sheet_cache(self, worksheet_name: str):
+        """Invalide le cache d'un worksheet apres modification."""
+        cache_key = f"{self.google_sheet_id}:{worksheet_name}"
+        self._sheet_cache.pop(cache_key, None)
+        self._sheet_cache_time.pop(cache_key, None)
 
     def _normalize_private_key(self, private_key: str) -> str:
         """
@@ -523,24 +586,11 @@ class SalleChecker:
         if not self.google_sheet_id or not GSPREAD_AVAILABLE:
             return results, None
 
+        all_values, error = self._get_worksheet_values_cached("Planning quotidien")
+        if error:
+            return results, error
+
         try:
-            client, error = self._get_google_client()
-            if error:
-                return results, error
-            if not client:
-                return results, "Client Google Sheets non initialisé"
-
-            # Ouvrir le spreadsheet et la feuille "Planning quotidien"
-            spreadsheet = client.open_by_key(self.google_sheet_id)
-            try:
-                worksheet = spreadsheet.worksheet("Planning quotidien")
-            except gspread.exceptions.WorksheetNotFound:
-                # Essayer la première feuille si "Planning quotidien" n'existe pas
-                worksheet = spreadsheet.get_worksheet(0)
-
-            # Récupérer toutes les valeurs (à partir de la ligne 6 comme dans l'Excel)
-            all_values = worksheet.get_all_values()
-
             for row_idx, row in enumerate(all_values[5:], start=6):  # Commencer à la ligne 6 (index 5)
                 if len(row) < 5:
                     continue
@@ -554,7 +604,7 @@ class SalleChecker:
                 reste = self._get_cell_value(row, 6)          # Colonne G
                 prix_location = self._get_cell_value(row, 7)  # Colonne H
                 caution = self._get_cell_value(row, 8)        # Colonne I
-                # Colonne J = "ajouté par [username]" (nouveau) ou anciennement salle_occupation
+                # Colonne J = "ajouté par [username]"
                 added_by_raw = self._get_cell_value(row, 9)
                 added_by = ""
                 if added_by_raw.startswith("ajouté par "):
@@ -563,18 +613,15 @@ class SalleChecker:
                 if not salle_cell or not date_cell:
                     continue
 
-                # Vérifier la correspondance de la salle
                 if not salle_matches(str(salle_cell).lower().strip(), salle_name):
                     continue
 
-                # Parser la date
                 dates = self._parse_date_from_sheet(date_cell)
                 if d not in dates:
                     continue
 
                 nom = str(nom_cell).strip() if nom_cell else "Inconnu"
 
-                # Vérifier si certaines infos financières sont manquantes
                 infos_manquantes = []
                 if not accompte:
                     infos_manquantes.append("Accompte")
@@ -585,7 +632,6 @@ class SalleChecker:
                 if not caution:
                     infos_manquantes.append("Chèque caution ménage")
 
-                # Gérer l'horaire
                 debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
 
                 reservation_data = {
@@ -612,7 +658,6 @@ class SalleChecker:
                 else:
                     reservation_data["debut"] = time(0, 0)
                     reservation_data["fin"] = time(23, 59)
-                    # Warning seulement si horaire textuel (pas si vide)
                     if not is_vide:
                         reservation_data["warning"] = "Horaire non indiqué, veuillez le renseigner"
                     results.append(reservation_data)
@@ -847,21 +892,11 @@ class SalleChecker:
         if not self.google_sheet_id or not GSPREAD_AVAILABLE:
             return results, None
 
+        all_values, error = self._get_worksheet_values_cached("Planning quotidien")
+        if error:
+            return results, error
+
         try:
-            client, error = self._get_google_client()
-            if error:
-                return results, error
-            if not client:
-                return results, "Client Google Sheets non initialisé"
-
-            spreadsheet = client.open_by_key(self.google_sheet_id)
-            try:
-                worksheet = spreadsheet.worksheet("Planning quotidien")
-            except gspread.exceptions.WorksheetNotFound:
-                worksheet = spreadsheet.get_worksheet(0)
-
-            all_values = worksheet.get_all_values()
-
             for row_idx, row in enumerate(all_values[5:], start=6):
                 if len(row) < 5:
                     continue
@@ -870,12 +905,10 @@ class SalleChecker:
                 nom_cell = row[2] if len(row) > 2 else None
                 horaire_cell = row[3] if len(row) > 3 else None
                 date_cell = row[4] if len(row) > 4 else None
-                # Nouvelles colonnes (F, G, H, I, J)
-                accompte = self._get_cell_value(row, 5)       # Colonne F
-                reste = self._get_cell_value(row, 6)          # Colonne G
-                prix_location = self._get_cell_value(row, 7)  # Colonne H
-                caution = self._get_cell_value(row, 8)        # Colonne I
-                # Colonne J = "ajouté par [username]" (nouveau) ou anciennement salle_occupation
+                accompte = self._get_cell_value(row, 5)
+                reste = self._get_cell_value(row, 6)
+                prix_location = self._get_cell_value(row, 7)
+                caution = self._get_cell_value(row, 8)
                 added_by_raw = self._get_cell_value(row, 9)
                 added_by = ""
                 if added_by_raw.startswith("ajouté par "):
@@ -893,7 +926,6 @@ class SalleChecker:
 
                 nom = str(nom_cell).strip() if nom_cell else "Inconnu"
 
-                # Vérifier si certaines infos financières sont manquantes
                 infos_manquantes = []
                 if not accompte:
                     infos_manquantes.append("Accompte")
@@ -929,7 +961,6 @@ class SalleChecker:
                 else:
                     reservation_data["debut"] = time(0, 0)
                     reservation_data["fin"] = time(23, 59)
-                    # Warning seulement si horaire textuel (pas si vide)
                     if not is_vide:
                         reservation_data["warning"] = "Horaire non indiqué, veuillez le renseigner"
                     results.append(reservation_data)
@@ -939,7 +970,7 @@ class SalleChecker:
 
         return results, None
 
-    def update_reservation_google(self, salle_name: str, d: date, occupant: str, 
+    def update_reservation_google(self, salle_name: str, d: date, occupant: str,
                                    new_data: dict) -> tuple:
         """
         Met à jour une réservation dans Google Sheets.
@@ -961,7 +992,9 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 worksheet = spreadsheet.get_worksheet(0)
 
-            all_values = worksheet.get_all_values()
+            all_values, error = self._get_worksheet_values_cached("Planning quotidien")
+            if error:
+                return False, error
 
             # Chercher la ligne correspondante (clé : nom + date, salle optionnelle)
             for row_idx, row in enumerate(all_values[5:], start=6):
@@ -1016,6 +1049,7 @@ class SalleChecker:
                 if updates:
                     worksheet.batch_update(updates)
 
+                self._invalidate_sheet_cache("Planning quotidien")
                 return True, None
 
             return False, "Réservation non trouvée"
@@ -1044,9 +1078,9 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 worksheet = spreadsheet.get_worksheet(0)
 
-            all_values = worksheet.get_all_values()
-            print(f"[DEBUG delete] Searching for salle={salle_name}, date={d}, occupant='{occupant}'")
-            print(f"[DEBUG delete] Total rows in sheet: {len(all_values)}")
+            all_values, error = self._get_worksheet_values_cached("Planning quotidien")
+            if error:
+                return False, error
 
             for row_idx, row in enumerate(all_values[5:], start=6):
                 if len(row) < 5:
@@ -1061,30 +1095,22 @@ class SalleChecker:
 
                 salle_str = str(salle_cell).strip() if salle_cell else ""
                 nom_str = str(nom_cell).strip() if nom_cell else ""
-                date_str = str(date_cell).strip() if date_cell else ""
-
-                print(f"[DEBUG delete] Row {row_idx}: salle='{salle_str}', nom='{nom_str}', date='{date_str}'")
 
                 if salle_cell:
                     if not salle_matches(str(salle_cell).lower().strip(), salle_name):
-                        print(f"[DEBUG delete]   -> salle mismatch")
                         continue
 
                 dates = self._parse_date_from_sheet(date_cell)
-                print(f"[DEBUG delete]   -> parsed dates: {dates}")
                 if d not in dates:
-                    print(f"[DEBUG delete]   -> date mismatch")
                     continue
 
                 if nom_str != occupant:
-                    print(f"[DEBUG delete]   -> occupant mismatch: '{nom_str}' != '{occupant}'")
                     continue
 
-                print(f"[DEBUG delete]   -> MATCH! Deleting row {row_idx}")
                 worksheet.delete_rows(row_idx)
+                self._invalidate_sheet_cache("Planning quotidien")
                 return True, None
 
-            print(f"[DEBUG delete] -> No match found")
             return False, "Réservation non trouvée"
 
         except Exception as e:
@@ -1131,11 +1157,16 @@ class SalleChecker:
             ]
 
             # TOUJOURS ajouter à la fin du sheet, jamais réutiliser une ligne vide
-            all_values = worksheet.get_all_values()
+            all_values, error = self._get_worksheet_values_cached("Planning quotidien")
+            if error:
+                return False, error
+
             next_row = len(all_values) + 1
             worksheet.add_rows(1)
-
             worksheet.update(f'A{next_row}:K{next_row}', [new_row], value_input_option='USER_ENTERED')
+
+            # Invalider le cache pour forcer une relecture fraiche
+            self._invalidate_sheet_cache("Planning quotidien")
             return True, f"ligne {next_row}"
 
         except Exception as e:
@@ -1286,23 +1317,21 @@ class SalleChecker:
         if not self.google_sheet_id or not GSPREAD_AVAILABLE:
             return {}
 
+        all_values, error = self._get_worksheet_values_cached("Utilisateurs")
+        if error or not all_values:
+            return {}
+
         try:
-            client, error = self._get_google_client()
-            if error or not client:
-                return {}
+            headers = [str(h).strip().lower() for h in all_values[0]]
+            idx_username = headers.index('username') if 'username' in headers else 0
+            idx_name = headers.index('name') if 'name' in headers else 1
+            idx_password = headers.index('password_hash') if 'password_hash' in headers else 2
 
-            spreadsheet = client.open_by_key(self.google_sheet_id)
-            try:
-                worksheet = spreadsheet.worksheet("Utilisateurs")
-            except gspread.exceptions.WorksheetNotFound:
-                return {}
-
-            rows = worksheet.get_all_records()
             users = {}
-            for row in rows:
-                username = str(row.get('username', '')).strip()
-                name = str(row.get('name', '')).strip()
-                pwd_hash = str(row.get('password_hash', '')).strip()
+            for row in all_values[1:]:
+                username = str(row[idx_username]).strip() if len(row) > idx_username else ""
+                name = str(row[idx_name]).strip() if len(row) > idx_name else ""
+                pwd_hash = str(row[idx_password]).strip() if len(row) > idx_password else ""
                 if username and pwd_hash:
                     users[username] = {
                         "name": name or username,
@@ -1338,13 +1367,18 @@ class SalleChecker:
             from datetime import datetime
             created_at = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-            all_values = worksheet.get_all_values()
+            all_values, error = self._get_worksheet_values_cached("Utilisateurs")
+            if error:
+                return False, error
+
             next_row = len(all_values) + 1
             worksheet.add_rows(1)
 
             worksheet.update(f'A{next_row}:E{next_row}',
                 [[username, name, password_hash, created_by, created_at]],
                 value_input_option='USER_ENTERED')
+
+            self._invalidate_sheet_cache("Utilisateurs")
             return True, "Compte créé avec succès"
         except Exception as e:
             return False, f"Erreur ajout utilisateur: {str(e)}"
@@ -1370,12 +1404,16 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 return False, "Onglet 'Utilisateurs' introuvable"
 
-            all_values = worksheet.get_all_values()
+            all_values, error = self._get_worksheet_values_cached("Utilisateurs")
+            if error:
+                return False, error
+
             for i, row in enumerate(all_values):
                 if i == 0:
                     continue  # header
                 if len(row) > 0 and str(row[0]).strip() == username:
                     worksheet.update(f'C{i+1}', [[new_password_hash]], value_input_option='USER_ENTERED')
+                    self._invalidate_sheet_cache("Utilisateurs")
                     return True, f"Mot de passe de {username} mis à jour"
 
             return False, f"Utilisateur {username} non trouvé"
@@ -1403,12 +1441,16 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 return False, "Onglet 'Utilisateurs' introuvable"
 
-            all_values = worksheet.get_all_values()
+            all_values, error = self._get_worksheet_values_cached("Utilisateurs")
+            if error:
+                return False, error
+
             for i, row in enumerate(all_values):
                 if i == 0:
                     continue  # header
                 if len(row) > 0 and str(row[0]).strip() == username:
                     worksheet.delete_rows(i + 1)
+                    self._invalidate_sheet_cache("Utilisateurs")
                     return True, f"Utilisateur {username} supprimé"
 
             return False, f"Utilisateur {username} non trouvé"
