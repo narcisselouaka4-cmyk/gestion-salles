@@ -176,6 +176,18 @@ class SalleChecker:
         # Cache pour le mapping couleur -> occupant (stables)
         self._color_map_cache = {}
 
+    def _normalize_private_key(self, private_key: str) -> str:
+        """
+        Normalise une clé privée pour Google auth.
+        Gère les cas où les retours à la ligne sont échappés (\\n) dans une variable d'env.
+        """
+        if not private_key:
+            return private_key
+        # Remplacer les doubles backslash échappés par de vrais retours à la ligne
+        if "\\n" in private_key:
+            private_key = private_key.replace("\\n", "\n")
+        return private_key
+
     def _get_google_client(self):
         """
         Initialise et retourne le client Google Sheets.
@@ -187,103 +199,103 @@ class SalleChecker:
         if self._google_client is not None:
             return self._google_client, None
 
+        scopes = ['https://www.googleapis.com/auth/spreadsheets']
+        errors = []
+
+        # 1. Streamlit secrets (Streamlit Cloud)
         try:
-            scopes = ['https://www.googleapis.com/auth/spreadsheets']
+            import streamlit as st
+            if "google_credentials" in st.secrets:
+                creds_info = dict(st.secrets["google_credentials"])
+                creds_info["private_key"] = self._normalize_private_key(creds_info.get("private_key", ""))
+                creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                self._google_client = gspread.authorize(creds)
+                print("[Google Auth] Authentifié via Streamlit secrets")
+                return self._google_client, None
+        except Exception as e:
+            errors.append(f"Streamlit secrets: {str(e)}")
 
-            # Essayer de charger depuis Streamlit secrets (pour Streamlit Cloud)
-            # ou depuis les variables d'environnement (pour Render)
+        # 2. GOOGLE_CREDENTIALS_JSON (base64) - Render
+        import os
+        if os.environ.get("GOOGLE_CREDENTIALS_JSON"):
             try:
-                import streamlit as st
-                if "google_credentials" in st.secrets:
-                    creds_info = dict(st.secrets["google_credentials"])
-                    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-                    self._google_client = gspread.authorize(creds)
-                    return self._google_client, None
-            except Exception:
-                pass  # Pas sur Streamlit ou pas de secrets
+                json_b64 = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+                json_bytes = base64.b64decode(json_b64)
+                creds_info = json.loads(json_bytes)
+                creds_info["private_key"] = self._normalize_private_key(creds_info.get("private_key", ""))
+                creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                self._google_client = gspread.authorize(creds)
+                print("[Google Auth] Authentifié via GOOGLE_CREDENTIALS_JSON")
+                return self._google_client, None
+            except Exception as e:
+                errors.append(f"GOOGLE_CREDENTIALS_JSON: {str(e)}")
 
-            # Essayer depuis GOOGLE_CREDENTIALS_JSON (base64) - Render
-            import os
-            if os.environ.get("GOOGLE_CREDENTIALS_JSON"):
-                try:
-                    json_b64 = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-                    # Décoder le base64
-                    json_bytes = base64.b64decode(json_b64)
-                    creds_info = json.loads(json_bytes)
-                    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-                    self._google_client = gspread.authorize(creds)
-                    return self._google_client, None
-                except Exception as json_error:
-                    return None, f"Erreur GOOGLE_CREDENTIALS_JSON: {str(json_error)}"
+        # 3. Variables d'environnement individuelles (Render)
+        if os.environ.get("GOOGLE_CREDENTIALS_TYPE"):
+            try:
+                private_key = self._normalize_private_key(os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY", ""))
+                creds_info = {
+                    "type": os.environ.get("GOOGLE_CREDENTIALS_TYPE"),
+                    "project_id": os.environ.get("GOOGLE_CREDENTIALS_PROJECT_ID"),
+                    "private_key_id": os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY_ID"),
+                    "private_key": private_key,
+                    "client_email": os.environ.get("GOOGLE_CREDENTIALS_CLIENT_EMAIL"),
+                    "client_id": os.environ.get("GOOGLE_CREDENTIALS_CLIENT_ID"),
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+                creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                self._google_client = gspread.authorize(creds)
+                print("[Google Auth] Authentifié via variables d'environnement")
+                return self._google_client, None
+            except Exception as e:
+                errors.append(f"Variables d'environnement: {str(e)}")
 
-            # Essayer depuis les variables d'environnement individuelles (Render)
-            if os.environ.get("GOOGLE_CREDENTIALS_TYPE"):
+        # 4. Fichiers secrets Render / locaux
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), "google-credentials.json"),
+            os.path.join(os.path.dirname(__file__), "gcp_credentials.json"),
+            "/etc/secrets/google-credentials.json",
+            "/etc/secrets/gcp_credentials.json",
+            "/mnt/secrets/google-credentials.json",
+            "/mnt/secrets/gcp_credentials.json",
+            "/secrets/google-credentials.json",
+            "/secrets/gcp_credentials.json",
+            "google-credentials.json",
+            "gcp_credentials.json",
+        ]
+        for secret_path in possible_paths:
+            if os.path.exists(secret_path):
                 try:
-                    private_key = os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY", "")
-                    # Gérer plusieurs formats possibles de la clé
-                    if "\\n" in private_key:
-                        private_key = private_key.replace("\\n", "\n")
-                    creds_info = {
-                        "type": os.environ.get("GOOGLE_CREDENTIALS_TYPE"),
-                        "project_id": os.environ.get("GOOGLE_CREDENTIALS_PROJECT_ID"),
-                        "private_key_id": os.environ.get("GOOGLE_CREDENTIALS_PRIVATE_KEY_ID"),
-                        "private_key": private_key,
-                        "client_email": os.environ.get("GOOGLE_CREDENTIALS_CLIENT_EMAIL"),
-                        "client_id": os.environ.get("GOOGLE_CREDENTIALS_CLIENT_ID"),
-                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                        "token_uri": "https://oauth2.googleapis.com/token",
-                    }
-                    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                    creds = Credentials.from_service_account_file(secret_path, scopes=scopes)
                     self._google_client = gspread.authorize(creds)
+                    print(f"[Google Auth] Authentifié via fichier secret: {secret_path}")
                     return self._google_client, None
                 except Exception as e:
-                    # Essayer avec un fichier secret si les variables échouent
-                    import os
-                    possible_paths = [
-                        "/etc/secrets/google-credentials.json",
-                        "/etc/secrets/gcp_credentials.json",
-                        "/mnt/secrets/google-credentials.json",
-                        "/mnt/secrets/gcp_credentials.json",
-                        "/secrets/google-credentials.json",
-                        "/secrets/gcp_credentials.json",
-                        "google-credentials.json",
-                        "gcp_credentials.json",
-                    ]
-                    for secret_path in possible_paths:
-                        if os.path.exists(secret_path):
-                            try:
-                                creds = Credentials.from_service_account_file(secret_path, scopes=scopes)
-                                self._google_client = gspread.authorize(creds)
-                                return self._google_client, None
-                            except Exception as file_error:
-                                return None, f"Erreur fichier secret {secret_path}: {str(file_error)}"
-                    return None, f"Erreur variables d'environnement: {str(e)}"
+                    errors.append(f"Fichier secret {secret_path}: {str(e)}")
 
-            # Sinon, chercher le fichier credentials.json local
-            credentials_paths = [
-                os.path.join(os.path.dirname(__file__), "credentials.json"),
-                os.path.join(os.path.dirname(__file__), "gcp_credentials.json"),
-                "/home/visiteur/projet_salles/credentials.json",
-                "/home/visiteur/projet_salles/gcp_credentials.json",
-                "credentials.json",
-                "gcp_credentials.json",
-            ]
+        # 5. Fichiers credentials.json locaux
+        credentials_paths = [
+            os.path.join(os.path.dirname(__file__), "credentials.json"),
+            os.path.join(os.path.dirname(__file__), "gcp_credentials.json"),
+            "/home/visiteur/projet_salles/credentials.json",
+            "/home/visiteur/projet_salles/gcp_credentials.json",
+            "credentials.json",
+            "gcp_credentials.json",
+        ]
+        for creds_path in credentials_paths:
+            if os.path.exists(creds_path):
+                try:
+                    creds = Credentials.from_service_account_file(creds_path, scopes=scopes)
+                    self._google_client = gspread.authorize(creds)
+                    print(f"[Google Auth] Authentifié via fichier local: {creds_path}")
+                    return self._google_client, None
+                except Exception as e:
+                    errors.append(f"Fichier local {creds_path}: {str(e)}")
 
-            creds_path = None
-            for path in credentials_paths:
-                if os.path.exists(path):
-                    creds_path = path
-                    break
-
-            if creds_path:
-                creds = Credentials.from_service_account_file(creds_path, scopes=scopes)
-                self._google_client = gspread.authorize(creds)
-                return self._google_client, None
-
-            return None, "Aucune méthode d'authentification Google trouvée (ni secrets ni credentials.json)"
-
-        except Exception as e:
-            return None, f"Erreur connexion Google Sheets: {str(e)}"
+        error_msg = "Aucune méthode d'authentification Google n'a fonctionné. " + " | ".join(errors)
+        print(f"[Google Auth] {error_msg}")
+        return None, error_msg
 
     def _load_salle_workbook(self, salle_name: str):
         """
