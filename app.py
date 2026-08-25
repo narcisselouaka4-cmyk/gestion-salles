@@ -18,6 +18,7 @@ except ImportError:
     pass
 
 from checker import SalleChecker
+import notifications
 
 # ═══════════════════════════════════════════════════════════
 # CONFIG PAGE
@@ -563,6 +564,7 @@ def render_detail_card(occ):
         ('reste_a_payer', 'Reste'),
         ('prix_location', 'Prix loc.'),
         ('caution_menage', 'Caution'),
+        ('telephone', 'Téléphone'),
         ('salle', 'Salle'),
         ('added_by', 'Ajouté par'),
     ]:
@@ -1094,6 +1096,7 @@ def onglet_editer_planning(checker):
                             new_prix = st.text_input("Prix loc. (€)", value=occ.get('prix_location', ''), key=f"ep_prix_{idx}")
                         with ec3:
                             new_caution = st.text_input("Caution", value=occ.get('caution_menage', ''), key=f"ep_caution_{idx}")
+                            new_telephone = st.text_input("Téléphone", value=occ.get('telephone', ''), key=f"ep_telephone_{idx}")
                             new_salle_occ = st.text_input("Salle", value=occ.get('salle', ''), key=f"ep_salle_occ_{idx}")
 
                         btn1, btn2, btn3, btn4 = st.columns([2, 1, 1, 1])
@@ -1120,6 +1123,7 @@ def onglet_editer_planning(checker):
                             update_data['reste_a_payer'] = f"{new_reste}€" if new_reste and '€' not in new_reste else (new_reste if new_reste else "")
                             update_data['prix_location'] = f"{new_prix}€" if new_prix and '€' not in new_prix else (new_prix if new_prix else "")
                             update_data['caution_menage'] = new_caution if new_caution else ""
+                            update_data['telephone'] = new_telephone if new_telephone else ""
                             update_data['salle_occupation'] = new_salle_occ if new_salle_occ else ""
 
                             success, error = checker.update_reservation_google(
@@ -1136,7 +1140,7 @@ def onglet_editer_planning(checker):
                             old_occupant = occ.get('occupant', '')
                             success, error = checker.update_reservation_google(
                                 current_salle.lower(), current_date, old_occupant.strip(),
-                                {'accompte': "", 'reste_a_payer': "", 'prix_location': "", 'caution_menage': "", 'salle_occupation': ""}
+                                {'accompte': "", 'reste_a_payer': "", 'prix_location': "", 'caution_menage': "", 'telephone': "", 'salle_occupation': ""}
                             )
                             if success:
                                 st.session_state.ep_edit_success = "Informations effacées"
@@ -1168,6 +1172,9 @@ def onglet_editer_planning(checker):
         st.error(f"Erreur : {st.session_state.ep_add_error}")
         st.session_state.ep_add_error = None
         st.session_state.ep_add_success = False
+    if st.session_state.get("ep_add_warning"):
+        st.warning(st.session_state.ep_add_warning)
+        st.session_state.ep_add_warning = None
 
     st.markdown("""
     <div style="margin-bottom: 1rem;">
@@ -1189,6 +1196,7 @@ def onglet_editer_planning(checker):
             add_prix = st.text_input("Prix loc. (€)", placeholder="650", key="add_prix")
         with a_col3:
             add_caution = st.text_input("Caution", placeholder="Oui", key="add_caution")
+            add_telephone = st.text_input("Téléphone", placeholder="06 12 34 56 78", key="add_telephone")
             add_salle_select = st.selectbox(
                 "Salle",
                 options=["Salle principale", "Salle du fond", "Salle du milieu"],
@@ -1217,6 +1225,7 @@ def onglet_editer_planning(checker):
                     'reste_a_payer': f"{add_reste}€" if add_reste and '€' not in add_reste else (add_reste if add_reste else ""),
                     'prix_location': f"{add_prix}€" if add_prix and '€' not in add_prix else (add_prix if add_prix else ""),
                     'caution_menage': add_caution if add_caution else "",
+                    'telephone': add_telephone if add_telephone else "",
                     'salle_occupation': "",
                     'added_by': st.session_state.get("username", "Inconnu"),
                 }
@@ -1227,16 +1236,144 @@ def onglet_editer_planning(checker):
                     st.session_state.ep_add_error = None
                     st.session_state.ep_needs_search = True
                     try:
-                        st.session_state.ep_target_date = datetime.strptime(add_date_str, "%d/%m/%y").date()
+                        parsed_date = datetime.strptime(add_date_str, "%d/%m/%y").date()
                     except ValueError:
-                        st.session_state.ep_target_date = datetime.now().date()
+                        try:
+                            parsed_date = datetime.strptime(add_date_str, "%d/%m/%Y").date()
+                        except ValueError:
+                            parsed_date = datetime.now().date()
+                    st.session_state.ep_target_date = parsed_date
                     st.session_state.ep_target_salle = add_salle_select
+
+                    # ── Notifications ──
+                    # (b) Alerte doublon : vérifier les conflits de créneau
+                    try:
+                        conflits = checker.check_reservation_conflict(
+                            add_salle_select.lower(), parsed_date, add_horaire
+                        )
+                        if conflits:
+                            for c in conflits:
+                                notifications.envoyer_alerte_doublon(
+                                    checker, new_data, c
+                                )
+                            st.session_state.ep_add_warning = (
+                                f"⚠️ Conflit détecté avec {len(conflits)} occupation(s) existante(s) "
+                                f"sur ce créneau — une alerte a été envoyée par email."
+                            )
+                    except Exception as e:
+                        print(f"[App] Erreur vérification conflit: {e}")
+
+                    # (c) Notification nouvel ajout
+                    try:
+                        notifications.envoyer_nouvel_ajout(checker, new_data)
+                    except Exception as e:
+                        print(f"[App] Erreur notification nouvel ajout: {e}")
                 else:
                     st.session_state.ep_add_error = info
                     st.session_state.ep_add_success = False
                 st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+def onglet_notifications(checker):
+    """Onglet pour configurer les notifications par email."""
+    import notifications
+
+    st.markdown("""
+    <div style="margin-bottom: 1.5rem;">
+        <h2 style="margin: 0; font-size: 1.4rem;">Notifications</h2>
+        <p style="color: #94a3b8; margin-top: 0.25rem; font-size: 0.9rem;">Recevez les alertes et récapitulatifs par email</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Statut des notifications
+    active = notifications.notifications_active()
+    if active:
+        st.success("✅ Les notifications email sont activées.")
+    else:
+        st.warning("⚠️ Les notifications email sont désactivées (SMTP non configuré). Contactez l'administrateur.")
+
+    # ── Mon email ──
+    st.markdown("### 📧 Mon email de notification")
+    st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+    current_user = st.session_state.get("username", "")
+    current_email = checker.get_user_email(current_user)
+    st.markdown(f"**Compte :** {current_user}")
+
+    with st.form(key="notif_email_form", border=False):
+        new_email = st.text_input("Votre email", value=current_email, placeholder="ex: jean.dupont@gmail.com")
+        email_submitted = st.form_submit_button("Enregistrer mon email", type="primary", use_container_width=True)
+
+        if email_submitted:
+            if new_email and "@" not in new_email:
+                st.error("❌ Email invalide.")
+            else:
+                success, info = checker.update_user_email_google(current_user, new_email.strip())
+                if success:
+                    st.success(f"✅ {info}")
+                else:
+                    st.error(f"❌ {info}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Test d'envoi ──
+    st.markdown("### 🧪 Tester l'envoi")
+    st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📨 Envoyer le récap de demain", use_container_width=True):
+            if not active:
+                st.error("Notifications désactivées.")
+            else:
+                with st.spinner("Envoi en cours..."):
+                    success, error = notifications.envoyer_recap_quotidien(checker)
+                    if success:
+                        st.success("✅ Récap envoyé ! Vérifiez votre boîte mail.")
+                    else:
+                        st.error(f"❌ {error}")
+    with col2:
+        if st.button("🔔 Envoyer un email de test", use_container_width=True):
+            if not active:
+                st.error("Notifications désactivées.")
+            else:
+                emails = checker.get_notification_emails()
+                if not emails:
+                    st.warning("Aucun email enregistré. Renseignez votre email ci-dessus.")
+                else:
+                    from datetime import date as _date
+                    resa_test = {
+                        "salle": "Salle de test",
+                        "occupant": "Test",
+                        "date": _date.today().strftime("%d/%m/%Y"),
+                        "horaire": "14H00 - 16H00",
+                        "telephone": "",
+                        "accompte": "",
+                        "added_by": current_user,
+                    }
+                    with st.spinner("Envoi..."):
+                        success, error = notifications.envoyer_nouvel_ajout(checker, resa_test)
+                        if success:
+                            st.success(f"✅ Email de test envoyé à : {', '.join(emails)}")
+                        else:
+                            st.error(f"❌ {error}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Infos sur les destinataires (admin) ──
+    admin_user = os.environ.get("AUTH_USER", "")
+    if current_user == admin_user:
+        st.markdown("### 👥 Destinataires enregistrés")
+        users = checker.get_users_google()
+        emails_list = [(u, (d.get("email") or "").strip()) for u, d in users.items()]
+        if emails_list:
+            for u, em in emails_list:
+                badge = "✅" if em and "@" in em else "❌"
+                label = em if em else "*(pas d'email)*"
+                st.markdown(f"{badge} **{u}** — {label}")
+        else:
+            st.info("Aucun utilisateur enregistré.")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1322,7 +1459,7 @@ def onglet_utilisateurs(checker, authenticator):
                         st.error("❌ Votre compte n'a pas été trouvé.")
                     else:
                         h = stauth.Hasher()
-                        if not h.check(old_pwd, all_users[current_user]["password"]):
+                        if not h.check_pw(old_pwd, all_users[current_user]["password"]):
                             st.error("❌ Ancien mot de passe incorrect.")
                         else:
                             new_hash = h.hash(new_pwd)
@@ -1491,7 +1628,7 @@ def render_login_screen(checker, authenticator):
                             st.error(f"❌ Utilisateur '{reset_user}' non trouvé.")
                         else:
                             h = stauth.Hasher()
-                            if not h.check(reset_old, all_users[reset_user.strip()]["password"]):
+                            if not h.check_pw(reset_old, all_users[reset_user.strip()]["password"]):
                                 st.error("❌ Ancien mot de passe incorrect.")
                             else:
                                 new_hash = h.hash(reset_new)
@@ -1516,33 +1653,49 @@ def main():
     checker = init_checker()
 
     # ═══════════════════════════════════════════════════════════
-    # AUTHENTIFICATION — env vars + Google Sheets users
+    # AUTHENTIFICATION — env vars / secrets + Google Sheets users
     # ═══════════════════════════════════════════════════════════
-    auth_user = os.environ.get("AUTH_USER", "")
-    auth_name = os.environ.get("AUTH_NAME", "")
-    auth_hash = os.environ.get("AUTH_HASH", "")
     cookie_name = os.environ.get("AUTH_COOKIE_NAME", "cfpdc_auth_cookie")
     cookie_key = os.environ.get("AUTH_COOKIE_KEY", "cfpdc_secret_key_2024")
     cookie_expiry = int(os.environ.get("AUTH_COOKIE_EXPIRY", "30"))
 
-    if not auth_user or not auth_hash:
+    # 1. Essayer les variables d'environnement
+    auth_user = os.environ.get("AUTH_USER", "")
+    auth_name = os.environ.get("AUTH_NAME", "")
+    auth_hash = os.environ.get("AUTH_HASH", "")
+
+    # 2. Fallback sur Streamlit secrets (local / Streamlit Cloud)
+    if (not auth_user or not auth_hash):
+        try:
+            secret_creds = st.secrets.get("auth_credentials", {})
+            if secret_creds and "usernames" in secret_creds:
+                credentials = {"usernames": dict(secret_creds["usernames"])}
+            else:
+                credentials = None
+        except Exception:
+            credentials = None
+    else:
+        credentials = {
+            "usernames": {
+                auth_user: {
+                    "name": auth_name or auth_user,
+                    "password": auth_hash,
+                }
+            }
+        }
+
+    if not credentials or not credentials.get("usernames"):
         st.error("Configuration d'authentification manquante. Contactez l'administrateur.")
         st.stop()
 
-    credentials = {
-        "usernames": {
-            auth_user: {
-                "name": auth_name or auth_user,
-                "password": auth_hash,
-            }
-        }
-    }
-
     # Charger les utilisateurs depuis Google Sheets si dispo
     if checker is not None:
-        sheet_users = checker.get_users_google()
-        if sheet_users:
-            credentials["usernames"].update(sheet_users)
+        try:
+            sheet_users = checker.get_users_google()
+            if sheet_users:
+                credentials["usernames"].update(sheet_users)
+        except Exception:
+            pass
 
     authenticator = stauth.Authenticate(
         credentials,
@@ -1567,6 +1720,12 @@ def main():
 
         render_sidebar(checker, authenticator)
 
+        # Démarrer le scheduler de notifications quotidiennes (thread daemon)
+        try:
+            notifications.NotifScheduler.demarrer(checker)
+        except Exception as e:
+            print(f"[App] Impossible de démarrer le scheduler de notifications: {e}")
+
         st.markdown("""
         <div style="margin-bottom: 2rem;">
             <h1 style="font-size: 1.8rem; margin: 0;">Tableau de bord</h1>
@@ -1576,7 +1735,7 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        tab1, tab2, tab3 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Utilisateurs"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Notifications", "Utilisateurs"])
 
         with tab1:
             onglet_gestion_salle(checker)
@@ -1585,6 +1744,9 @@ def main():
             onglet_editer_planning(checker)
 
         with tab3:
+            onglet_notifications(checker)
+
+        with tab4:
             onglet_utilisateurs(checker, authenticator)
 
     elif authentication_status == False:

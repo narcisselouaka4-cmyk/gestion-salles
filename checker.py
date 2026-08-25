@@ -90,8 +90,10 @@ def parse_horaire(horaire_str: str):
     return parse_time(parts[0]), parse_time(parts[1])
 
 
-def time_in_range(t: time, debut: time, fin: time) -> bool:
+def time_in_range(t, debut: time, fin: time) -> bool:
     """Vérifie si l'heure t est dans le créneau [debut, fin], avec gestion overnight."""
+    if t is None or not isinstance(t, time):
+        return False
     if debut <= fin:
         return debut <= t <= fin
     else:
@@ -360,6 +362,57 @@ class SalleChecker:
         print(f"[Google Auth] {error_msg}")
         return None, error_msg
 
+    def _ensure_planning_headers(self, worksheet):
+        """
+        Garantit que les en-têtes de la ligne 5 du 'Planning quotidien' incluent
+        la colonne K (Téléphone). Étend la grille si nécessaire et copie le style
+        des en-têtes existants.
+        """
+        try:
+            # Étendre la grille si pas assez de colonnes (besoin de 11 = A..K)
+            if worksheet.col_count < 11:
+                worksheet.add_cols(11 - worksheet.col_count)
+
+            values = worksheet.get_all_values()
+            if len(values) < 5:
+                return
+            header_row = values[4]  # ligne 5 (index 4)
+            # Si K5 est vide, on ajoute l'en-tête "Téléphone"
+            k_val = header_row[10].strip() if len(header_row) > 10 else ""
+            if not k_val:
+                worksheet.update(values=[['Téléphone']], range_name='K5')
+                # Copier le style de J5 vers K5 pour cohérence visuelle
+                try:
+                    import gspread_formatting as gf
+                    fmt = gf.get_user_entered_format(worksheet, 'J5')
+                    if fmt:
+                        gf.format_cell_ranges(worksheet, [('K5', fmt)])
+                except ImportError:
+                    pass
+                self._invalidate_sheet_cache("Planning quotidien")
+        except Exception as e:
+            print(f"[ensure_planning_headers] Erreur: {e}")
+
+    def _ensure_users_headers(self, worksheet):
+        """
+        Garantit que les en-têtes de l'onglet 'Utilisateurs' incluent la colonne F (email).
+        Étend la grille si nécessaire.
+        """
+        try:
+            if worksheet.col_count < 6:
+                worksheet.add_cols(6 - worksheet.col_count)
+
+            values = worksheet.get_all_values()
+            if not values:
+                return
+            header_row = values[0]
+            f_val = header_row[5].strip() if len(header_row) > 5 else ""
+            if not f_val:
+                worksheet.update(values=[['email']], range_name='F1')
+                self._invalidate_sheet_cache("Utilisateurs")
+        except Exception as e:
+            print(f"[ensure_users_headers] Erreur: {e}")
+
     def _load_salle_workbook(self, salle_name: str):
         """
         Charge le workbook d'une salle (sans data_only) et met en cache à la fois
@@ -599,7 +652,7 @@ class SalleChecker:
                 nom_cell = row[2] if len(row) > 2 else None    # Colonne C
                 horaire_cell = row[3] if len(row) > 3 else None  # Colonne D
                 date_cell = row[4] if len(row) > 4 else None    # Colonne E
-                # Nouvelles colonnes (F, G, H, I, J)
+                # Nouvelles colonnes (F, G, H, I, J, K)
                 accompte = self._get_cell_value(row, 5)       # Colonne F
                 reste = self._get_cell_value(row, 6)          # Colonne G
                 prix_location = self._get_cell_value(row, 7)  # Colonne H
@@ -609,6 +662,7 @@ class SalleChecker:
                 added_by = ""
                 if added_by_raw.startswith("ajouté par "):
                     added_by = added_by_raw.replace("ajouté par ", "")
+                telephone = self._get_cell_value(row, 10)      # Colonne K
 
                 if not salle_cell or not date_cell:
                     continue
@@ -644,6 +698,7 @@ class SalleChecker:
                     "caution_menage": caution,
                     "salle": str(salle_cell).strip() if salle_cell else "",
                     "added_by": added_by,
+                    "telephone": telephone,
                     "source": "réservation"
                 }
 
@@ -704,90 +759,12 @@ class SalleChecker:
         Vérifie les réservations extérieures pour une salle/date/heure.
         Retourne (occupations, error) où error est None si succès.
         """
-        # Si un Google Sheet est configuré, l'utiliser en priorité
-        if self.google_sheet_id:
-            return self.check_reservations_google(salle_name, d, time_requested)
+        # Le fallback sur fichier Excel a été supprimé ; les réservations
+        # ponctuelles sont désormais lues exclusivement depuis Google Sheets.
+        if not self.google_sheet_id:
+            return [], "Google Sheets non configuré pour les réservations"
 
-        # Sinon fallback sur le fichier Excel
-        results = []
-
-        try:
-            wb = load_workbook(self.planning_file, data_only=True)
-
-            if "Planning quotidien" not in wb.sheetnames:
-                return results
-
-            ws = wb["Planning quotidien"]
-            rows = list(ws.iter_rows(min_row=6, values_only=True))
-
-            for row in rows:
-                if not row or len(row) < 5:
-                    continue
-
-                salle_cell = row[1]  # Colonne B
-                nom_cell = row[2]    # Colonne C
-                horaire_cell = row[3]  # Colonne D
-                date_cell = row[4]   # Colonne E
-
-                if salle_cell is None or date_cell is None:
-                    continue
-
-                # Vérifier la correspondance de la salle
-                if not salle_matches(str(salle_cell).lower().strip(), salle_name):
-                    continue
-
-                # Parser la/les date(s)
-                dates = parse_dates(date_cell)
-                if d not in dates:
-                    continue
-
-                nom = str(nom_cell).strip() if nom_cell else "Inconnu"
-
-                # Gérer l'horaire
-                debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
-
-                if is_parseable:
-                    # Horaire numérique → vérifier si dans le créneau
-                    if time_in_range(time_requested, debut, fin):
-                        results.append({
-                            "occupant": nom,
-                            "activite": "Réservation ponctuelle",
-                            "horaire": label,
-                            "accompte": "Non renseigné",
-                            "reste_a_payer": "Non renseigné",
-                            "prix_location": "Non renseigné",
-                            "caution_menage": "Non renseigné",
-                            "salle_occupation": "Non renseigné",
-                            "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
-                            "debut": debut,
-                            "fin": fin,
-                            "source": "réservation"
-                        })
-                else:
-                    # Horaire textuel ou non indiqué
-                    reservation = {
-                        "occupant": nom,
-                        "activite": "Réservation ponctuelle",
-                        "horaire": label,
-                        "accompte": "Non renseigné",
-                        "reste_a_payer": "Non renseigné",
-                        "prix_location": "Non renseigné",
-                        "caution_menage": "Non renseigné",
-                        "salle_occupation": "Non renseigné",
-                        "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
-                        "debut": time(0, 0),
-                        "fin": time(23, 59),
-                        "source": "réservation"
-                    }
-                    # Warning seulement si horaire textuel (pas si vide)
-                    if not is_vide:
-                        reservation["warning"] = "Horaire non indiqué, veuillez le renseigner"
-                    results.append(reservation)
-
-        except Exception as e:
-            return results, f"Erreur lecture réservations: {str(e)}"
-
-        return results, None
+        return self.check_reservations_google(salle_name, d, time_requested)
 
     def get_all_fixed_occupations(self, salle_name: str, d: date) -> list:
         """
@@ -913,6 +890,7 @@ class SalleChecker:
                 added_by = ""
                 if added_by_raw.startswith("ajouté par "):
                     added_by = added_by_raw.replace("ajouté par ", "")
+                telephone = self._get_cell_value(row, 10)      # Colonne K
 
                 if not salle_cell or not date_cell:
                     continue
@@ -948,6 +926,7 @@ class SalleChecker:
                     "caution_menage": caution,
                     "salle": str(salle_cell).strip() if salle_cell else "",
                     "added_by": added_by,
+                    "telephone": telephone,
                     "source": "réservation"
                 }
 
@@ -1041,6 +1020,7 @@ class SalleChecker:
                 _add_update('G', 'reste_a_payer')
                 _add_update('H', 'prix_location')
                 _add_update('I', 'caution_menage')
+                _add_update('K', 'telephone')
                 # NOTE: colonne J = "ajouté par [username]" — ne pas modifier
 
                 if clear_ranges:
@@ -1139,8 +1119,12 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 worksheet = spreadsheet.get_worksheet(0)
 
-            # Construire la nouvelle ligne (A-K)
+            # S'assurer que la colonne K (Téléphone) existe et a son en-tête
+            self._ensure_planning_headers(worksheet)
+
+            # Construire la nouvelle ligne (A-L)
             # Colonne J = "ajouté par [username]"
+            # Colonne K = Téléphone
             added_by = data.get('added_by', 'Inconnu')
             new_row = [
                 "",                                   # A
@@ -1153,7 +1137,8 @@ class SalleChecker:
                 data.get('prix_location', ''),        # H
                 data.get('caution_menage', ''),       # I
                 f"ajouté par {added_by}" if added_by else "",  # J
-                "",                                   # K (vide)
+                data.get('telephone', ''),            # K
+                "",                                   # L (vide)
             ]
 
             # TOUJOURS ajouter à la fin du sheet, jamais réutiliser une ligne vide
@@ -1163,7 +1148,7 @@ class SalleChecker:
 
             next_row = len(all_values) + 1
             worksheet.add_rows(1)
-            worksheet.update(f'A{next_row}:K{next_row}', [new_row], value_input_option='USER_ENTERED')
+            worksheet.update(f'A{next_row}:L{next_row}', [new_row], value_input_option='USER_ENTERED')
 
             # Invalider le cache pour forcer une relecture fraiche
             self._invalidate_sheet_cache("Planning quotidien")
@@ -1172,90 +1157,84 @@ class SalleChecker:
         except Exception as e:
             return False, f"Erreur ajout Google Sheets: {str(e)}"
 
+    def check_reservation_conflict(self, salle_name: str, d: date, horaire_str: str) -> list:
+        """
+        Vérifie si une nouvelle réservation (salle + date + horaire) entre en conflit
+        avec les occupations déjà existantes (planning fixe + réservations ponctuelles).
+        Retourne une liste d'occupations en conflit (vide si aucun conflit).
+        """
+        conflits = []
+        try:
+            debut_new, fin_new = parse_horaire(horaire_str)
+        except Exception:
+            # Horaire non parseable → on ne peut pas vérifier
+            return conflits
+
+        # 1. Conflits avec le planning fixe
+        try:
+            fixed = self.get_all_fixed_occupations(salle_name, d)
+            for occ in fixed:
+                debut = occ.get("debut")
+                fin = occ.get("fin")
+                if not isinstance(debut, time) or not isinstance(fin, time):
+                    continue
+                if debut == time(0, 0) and fin == time(23, 59) and "warning" in occ:
+                    continue
+                # Chevauchement d'intervalles
+                start_a = self._time_to_minutes(debut_new)
+                end_a = self._time_to_minutes(fin_new)
+                if end_a <= start_a:
+                    end_a += 24 * 60
+                start_b = self._time_to_minutes(debut)
+                end_b = self._time_to_minutes(fin)
+                if end_b <= start_b:
+                    end_b += 24 * 60
+                if start_a < end_b and start_b < end_a:
+                    occ["salle"] = salle_name
+                    conflits.append(occ)
+        except Exception as e:
+            print(f"[check_reservation_conflict] Erreur planning fixe: {e}")
+
+        # 2. Conflits avec les réservations ponctuelles Google Sheets
+        try:
+            reservations, error = self.get_all_reservations_google(salle_name, d)
+            if error:
+                print(f"[check_reservation_conflict] Erreur Google Sheets: {error}")
+                return conflits
+            for occ in reservations:
+                debut = occ.get("debut")
+                fin = occ.get("fin")
+                if not isinstance(debut, time) or not isinstance(fin, time):
+                    continue
+                if debut == time(0, 0) and fin == time(23, 59) and "warning" in occ:
+                    continue
+                start_a = self._time_to_minutes(debut_new)
+                end_a = self._time_to_minutes(fin_new)
+                if end_a <= start_a:
+                    end_a += 24 * 60
+                start_b = self._time_to_minutes(debut)
+                end_b = self._time_to_minutes(fin)
+                if end_b <= start_b:
+                    end_b += 24 * 60
+                if start_a < end_b and start_b < end_a:
+                    occ["salle"] = salle_name
+                    conflits.append(occ)
+        except Exception as e:
+            print(f"[check_reservation_conflict] Erreur réservations: {e}")
+
+        return conflits
+
     def get_all_reservations(self, salle_name: str, d: date) -> tuple:
         """
         Récupère TOUTES les réservations ponctuelles d'une journée (sans filtrer par heure).
         Retourne (results, error) où error est None si succès.
         """
-        # Utiliser Google Sheets si configuré
-        if self.google_sheet_id:
-            return self.get_all_reservations_google(salle_name, d)
+        # Le fallback sur fichier Excel a été supprimé ; les réservations
+        # ponctuelles sont désormais lues exclusivement depuis Google Sheets.
+        if not self.google_sheet_id:
+            return [], "Google Sheets non configuré pour les réservations"
 
-        results = []
-
-        try:
-            wb = load_workbook(self.planning_file, data_only=True)
-
-            if "Planning quotidien" not in wb.sheetnames:
-                return results
-
-            ws = wb["Planning quotidien"]
-            rows = list(ws.iter_rows(min_row=6, values_only=True))
-
-            for row in rows:
-                if not row or len(row) < 5:
-                    continue
-
-                salle_cell = row[1]
-                nom_cell = row[2]
-                horaire_cell = row[3]
-                date_cell = row[4]
-
-                if salle_cell is None or date_cell is None:
-                    continue
-
-                if not salle_matches(str(salle_cell).lower().strip(), salle_name):
-                    continue
-
-                dates = parse_dates(date_cell)
-                if d not in dates:
-                    continue
-
-                nom = str(nom_cell).strip() if nom_cell else "Inconnu"
-
-                # Gérer l'horaire avec la même logique
-                debut, fin, label, is_parseable, is_vide = self._handle_horaire_cell(horaire_cell)
-
-                if is_parseable:
-                    results.append({
-                        "occupant": nom,
-                        "activite": "Réservation ponctuelle",
-                        "horaire": label,
-                        "accompte": "Non renseigné",
-                        "reste_a_payer": "Non renseigné",
-                        "prix_location": "Non renseigné",
-                        "caution_menage": "Non renseigné",
-                        "salle_occupation": "Non renseigné",
-                        "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
-                        "debut": debut,
-                        "fin": fin,
-                        "source": "réservation"
-                    })
-                else:
-                    # Horaire textuel ou non indiqué
-                    reservation = {
-                        "occupant": nom,
-                        "activite": "Réservation ponctuelle",
-                        "horaire": label,
-                        "accompte": "Non renseigné",
-                        "reste_a_payer": "Non renseigné",
-                        "prix_location": "Non renseigné",
-                        "caution_menage": "Non renseigné",
-                        "salle_occupation": "Non renseigné",
-                        "infos_manquantes": ["Accompte", "Reste à payer", "Prix de location", "Chèque caution ménage", "Salle d'occupation"],
-                        "debut": time(0, 0),
-                        "fin": time(23, 59),
-                        "source": "réservation"
-                    }
-                    # Warning seulement si horaire textuel (pas si vide)
-                    if not is_vide:
-                        reservation["warning"] = "Horaire non indiqué, veuillez le renseigner"
-                    results.append(reservation)
-
-        except Exception as e:
-            return results, f"Erreur lecture réservations: {str(e)}"
-
-        return results, None
+        return self.get_all_reservations_google(salle_name, d)
 
     def _time_to_minutes(self, t: time) -> int:
         """Convertit un objet time en minutes depuis minuit."""
@@ -1356,8 +1335,6 @@ class SalleChecker:
         # Trier par heure de début
         all_occupations.sort(key=lambda x: x["debut"])
 
-        all_occupations.sort(key=lambda x: x["debut"])
-
         result = {
             "salle": salle_name,
             "date": d,
@@ -1419,22 +1396,81 @@ class SalleChecker:
             idx_username = headers.index('username') if 'username' in headers else 0
             idx_name = headers.index('name') if 'name' in headers else 1
             idx_password = headers.index('password_hash') if 'password_hash' in headers else 2
+            idx_email = headers.index('email') if 'email' in headers else None
 
             users = {}
             for row in all_values[1:]:
                 username = str(row[idx_username]).strip() if len(row) > idx_username else ""
                 name = str(row[idx_name]).strip() if len(row) > idx_name else ""
                 pwd_hash = str(row[idx_password]).strip() if len(row) > idx_password else ""
+                email = ""
+                if idx_email is not None and len(row) > idx_email:
+                    email = str(row[idx_email]).strip()
                 if username and pwd_hash:
                     users[username] = {
                         "name": name or username,
-                        "password": pwd_hash
+                        "password": pwd_hash,
+                        "email": email
                     }
             return users
         except Exception:
             return {}
 
-    def add_user_google(self, username: str, name: str, password_hash: str, created_by: str = "") -> tuple:
+    def get_notification_emails(self) -> list:
+        """
+        Récupère la liste des emails valides depuis l'onglet 'Utilisateurs'.
+        Utilisé pour l'envoi des notifications.
+        """
+        users = self.get_users_google()
+        emails = []
+        for u, data in users.items():
+            email = (data.get("email") or "").strip()
+            if email and "@" in email:
+                emails.append(email)
+        return emails
+
+    def get_user_email(self, username: str) -> str:
+        """Récupère l'email d'un utilisateur donné."""
+        users = self.get_users_google()
+        return (users.get(username, {}).get("email") or "").strip()
+
+    def update_user_email_google(self, username: str, email: str) -> tuple:
+        """
+        Met à jour l'email d'un utilisateur dans l'onglet 'Utilisateurs' (colonne F).
+        Retourne (success, error_or_info).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Utilisateurs")
+            except gspread.exceptions.WorksheetNotFound:
+                return False, "Onglet 'Utilisateurs' introuvable"
+
+            all_values, error = self._get_worksheet_values_cached("Utilisateurs")
+            if error:
+                return False, error
+
+            for i, row in enumerate(all_values):
+                if i == 0:
+                    continue  # header
+                if len(row) > 0 and str(row[0]).strip() == username:
+                    worksheet.update(values=[[email]], range_name=f'F{i+1}', value_input_option='USER_ENTERED')
+                    self._invalidate_sheet_cache("Utilisateurs")
+                    return True, f"Email de {username} mis à jour"
+            return False, f"Utilisateur {username} non trouvé"
+        except Exception as e:
+            return False, f"Erreur mise à jour email: {str(e)}"
+
+    def add_user_google(self, username: str, name: str, password_hash: str, created_by: str = "", email: str = "") -> tuple:
         """
         Ajoute un nouvel utilisateur dans l'onglet 'Utilisateurs'.
         Retourne (success, error_or_info).
@@ -1454,8 +1490,11 @@ class SalleChecker:
                 worksheet = spreadsheet.worksheet("Utilisateurs")
             except gspread.exceptions.WorksheetNotFound:
                 # Créer l'onglet s'il n'existe pas
-                worksheet = spreadsheet.add_worksheet(title="Utilisateurs", rows=100, cols=5)
-                worksheet.update('A1:E1', [['username', 'name', 'password_hash', 'created_by', 'created_at']])
+                worksheet = spreadsheet.add_worksheet(title="Utilisateurs", rows=100, cols=6)
+                worksheet.update(values=[['username', 'name', 'password_hash', 'created_by', 'created_at', 'email']], range_name='A1:F1')
+
+            # S'assurer que la colonne email (F) existe
+            self._ensure_users_headers(worksheet)
 
             from datetime import datetime
             created_at = datetime.now().strftime("%d/%m/%Y %H:%M")
@@ -1467,8 +1506,8 @@ class SalleChecker:
             next_row = len(all_values) + 1
             worksheet.add_rows(1)
 
-            worksheet.update(f'A{next_row}:E{next_row}',
-                [[username, name, password_hash, created_by, created_at]],
+            worksheet.update(f'A{next_row}:F{next_row}',
+                [[username, name, password_hash, created_by, created_at, email]],
                 value_input_option='USER_ENTERED')
 
             self._invalidate_sheet_cache("Utilisateurs")
