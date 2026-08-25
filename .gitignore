@@ -65,3 +65,6 @@ salles_backup_*/
 salles_archive_old/
 checker_backup_*.py
 google_sheet_backup_*.xlsx
+
+# Préférences utilisateur locales (notifications, etc.)
+preferences/

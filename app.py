@@ -19,6 +19,7 @@ except ImportError:
 
 from checker import SalleChecker
 import notifications
+import preferences
 
 # ═══════════════════════════════════════════════════════════
 # CONFIG PAGE
@@ -780,6 +781,14 @@ def render_sidebar(checker, authenticator=None):
 
         # Footer
         st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
+
+        # ── Bouton réglages (rouage) ──
+        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;'>Réglages</div>", unsafe_allow_html=True)
+        if st.button("⚙️ Réglages avancés", use_container_width=True, key="btn_settings"):
+            st.session_state.show_settings = True
+            st.rerun()
+
+        st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
         st.markdown("""
         <div style="text-align: center; font-size: 0.7rem; color: #475569;">
             CFPDC © 2024<br>
@@ -1518,6 +1527,191 @@ def onglet_utilisateurs(checker, authenticator):
 
 
 # ═══════════════════════════════════════════════════════════
+# DIALOG DES RÉGLAGES (rouage ⚙️)
+# ═══════════════════════════════════════════════════════════
+def render_settings_dialog(checker, authenticator):
+    """Affiche le dialog des réglages avancés (depuis le bouton rouage)."""
+    if not st.session_state.get("show_settings", False):
+        return
+
+    current_user = st.session_state.get("username", "")
+    admin_user = os.environ.get("AUTH_USER", "")
+    is_admin = current_user == admin_user
+
+    @st.dialog("⚙️ Réglages avancés", width="large")
+    def _dialog():
+        st.markdown(f"**Compte connecté :** {current_user}")
+        st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
+
+        # ── Section Notifications ──
+        st.markdown("### 📧 Notifications par email")
+        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+        current_email = preferences.get_user_email(current_user, checker)
+        subscribed = preferences.is_subscribed(current_user)
+
+        new_email = st.text_input("Votre email", value=current_email, placeholder="ex: jean.dupont@gmail.com", key="settings_email")
+
+        if st.button("💾 Enregistrer mon email", use_container_width=True):
+            if new_email and "@" not in new_email:
+                st.error("❌ Email invalide.")
+            else:
+                preferences.set_user_email(current_user, new_email.strip())
+                st.success("✅ Email enregistré.")
+                st.rerun()
+
+        st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
+
+        notif_status = "✅ Abonné" if subscribed else "❌ Désabonné"
+        st.markdown(f"**Statut :** {notif_status}")
+
+        if subscribed:
+            if st.button("🔕 Me désabonner des notifications", use_container_width=True):
+                preferences.set_subscribed(current_user, False)
+                st.success("Vous êtes maintenant désabonné des notifications.")
+                st.rerun()
+        else:
+            if st.button("🔔 Me réabonner aux notifications", type="primary", use_container_width=True):
+                preferences.set_subscribed(current_user, True)
+                st.success("✅ Vous êtes maintenant abonné aux notifications.")
+                st.rerun()
+
+        # Test d'envoi (admin seulement)
+        if is_admin:
+            st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
+            st.markdown("#### 🧪 Test d'envoi")
+            import notifications as notif_mod
+            if st.button("📨 Envoyer le récap de demain"):
+                if not notif_mod.notifications_active():
+                    st.error("Notifications désactivées (SMTP non configuré).")
+                else:
+                    with st.spinner("Envoi..."):
+                        success, error = notif_mod.envoyer_recap_quotidien(checker)
+                        if success:
+                            st.success("✅ Récap envoyé !")
+                        else:
+                            st.error(f"❌ {error}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # ── Section Mot de passe ──
+        st.markdown("### 🔑 Modifier mon mot de passe")
+        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+        with st.form(key="settings_pwd_form", border=False):
+            old_pwd = st.text_input("Ancien mot de passe", type="password", key="settings_old_pwd")
+            c1, c2 = st.columns(2)
+            with c1:
+                new_pwd = st.text_input("Nouveau mot de passe", type="password", key="settings_new_pwd")
+            with c2:
+                new_pwd_confirm = st.text_input("Confirmer", type="password", key="settings_new_pwd_confirm")
+
+            pwd_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
+
+            if pwd_submitted:
+                if not old_pwd or not new_pwd:
+                    st.error("L'ancien et le nouveau mot de passe sont obligatoires.")
+                elif new_pwd != new_pwd_confirm:
+                    st.error("Les mots de passe ne correspondent pas.")
+                elif len(new_pwd) < 4:
+                    st.error("Le mot de passe doit faire au moins 4 caractères.")
+                else:
+                    all_users = checker.get_users_google()
+                    if current_user not in all_users:
+                        st.error("❌ Votre compte n'a pas été trouvé.")
+                    else:
+                        h = stauth.Hasher()
+                        if not h.check_pw(old_pwd, all_users[current_user]["password"]):
+                            st.error("❌ Ancien mot de passe incorrect.")
+                        else:
+                            new_hash = h.hash(new_pwd)
+                            success, info = checker.update_user_password_google(current_user, new_hash)
+                            if success:
+                                st.success(f"✅ {info}")
+                            else:
+                                st.error(f"❌ {info}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # ── Section Admin : gestion des comptes ──
+        if is_admin:
+            st.markdown("### 👥 Gestion des comptes (admin)")
+            st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+
+            with st.form(key="settings_admin_pwd_form", border=False):
+                target_user = st.text_input("Username à modifier", placeholder="ex: narcisse", key="settings_target_user")
+                admin_new_pwd = st.text_input("Nouveau mot de passe", type="password", key="settings_admin_new_pwd")
+
+                admin_pwd_submitted = st.form_submit_button("Mettre à jour le mot de passe", type="primary", use_container_width=True)
+
+                if admin_pwd_submitted:
+                    if not target_user or not admin_new_pwd:
+                        st.error("Le username et le nouveau mot de passe sont obligatoires.")
+                    elif len(admin_new_pwd) < 4:
+                        st.error("Le mot de passe doit faire au moins 4 caractères.")
+                    elif target_user.strip() == admin_user:
+                        st.error("❌ Impossible de modifier le compte administrateur ici.")
+                    else:
+                        all_users = checker.get_users_google()
+                        if target_user.strip() not in all_users:
+                            st.error(f"❌ Utilisateur '{target_user}' non trouvé.")
+                        else:
+                            h = stauth.Hasher()
+                            new_hash = h.hash(admin_new_pwd)
+                            success, info = checker.update_user_password_google(target_user.strip(), new_hash)
+                            if success:
+                                st.success(f"✅ {info}")
+                            else:
+                                st.error(f"❌ {info}")
+
+            st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
+
+            with st.form(key="settings_delete_form", border=False):
+                delete_user = st.text_input("Username à supprimer", placeholder="ex: ancien_compte", key="settings_delete_user")
+                confirm = st.checkbox("Je confirme la suppression définitive")
+
+                delete_submitted = st.form_submit_button("Supprimer le compte", use_container_width=True)
+
+                if delete_submitted:
+                    if not delete_user:
+                        st.error("Le username est obligatoire.")
+                    elif not confirm:
+                        st.error("Veuillez cocher la case de confirmation.")
+                    elif delete_user.strip() == admin_user:
+                        st.error("❌ Impossible de supprimer le compte administrateur.")
+                    else:
+                        success, info = checker.delete_user_google(delete_user.strip())
+                        if success:
+                            st.success(f"✅ {info}")
+                        else:
+                            st.error(f"❌ {info}")
+
+            st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
+            st.markdown("#### Utilisateurs enregistrés")
+            users = checker.get_users_google()
+            if users:
+                for u, data in users.items():
+                    st.markdown(f"""
+                    <div class="res-row" style="padding: 0.5rem 1rem;">
+                        <div class="res-name" style="font-weight: 700;">{u}</div>
+                        <div class="res-tag">{data.get('name', u)}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Aucun utilisateur trouvé.")
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        # Bouton fermer
+        st.markdown("<div style='margin: 0.5rem 0;'></div>", unsafe_allow_html=True)
+        if st.button("Fermer", use_container_width=True):
+            st.session_state.show_settings = False
+            st.rerun()
+
+    _dialog()
+
+
+# ═══════════════════════════════════════════════════════════
 # ÉCRAN DE LOGIN (non authentifié)
 # ═══════════════════════════════════════════════════════════
 def render_login_screen(checker, authenticator):
@@ -1737,10 +1931,11 @@ def main():
 
         is_admin = st.session_state.get("username", "") == os.environ.get("AUTH_USER", "")
 
+        # Onglets principaux (Utilisateurs et Notifications sont dans le rouage ⚙️)
         if is_admin:
-            tab1, tab2, tab3, tab4 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Notifications", "Utilisateurs"])
+            tab1, tab2, tab3 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Notifications"])
         else:
-            tab1, tab2, tab3 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Utilisateurs"])
+            tab1, tab2 = st.tabs(["Gestion de Salle", "Planning & Réservations"])
 
         with tab1:
             onglet_gestion_salle(checker)
@@ -1751,11 +1946,9 @@ def main():
         if is_admin:
             with tab3:
                 onglet_notifications(checker)
-            with tab4:
-                onglet_utilisateurs(checker, authenticator)
-        else:
-            with tab3:
-                onglet_utilisateurs(checker, authenticator)
+
+        # Dialog des réglages (rouage ⚙️ dans la sidebar)
+        render_settings_dialog(checker, authenticator)
 
     elif authentication_status == False:
         st.error("❌ Mot de passe incorrect")

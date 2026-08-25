@@ -23,6 +23,8 @@ import time as time_module
 from email.message import EmailMessage
 from datetime import datetime, date, timedelta
 
+import preferences
+
 # Jours de la semaine en français
 JOURS_FR = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 MOIS_FR = [
@@ -212,7 +214,7 @@ def envoyer_recap_quotidien(checker, date_cible: date = None) -> tuple:
         print(f"[Notifications] Aucune occupation pour le {date_cible}, pas d'email envoyé")
         return True, None
 
-    destinataires = checker.get_notification_emails()
+    destinataires = preferences.get_subscribed_emails(checker)
     if not destinataires:
         return False, "Aucun destinataire avec email valide"
 
@@ -232,7 +234,7 @@ def envoyer_alerte_doublon(checker, nouvelle_resa: dict, existante: dict) -> tup
     if not notifications_active():
         return False, "Notifications désactivées"
 
-    destinataires = checker.get_notification_emails()
+    destinataires = preferences.get_subscribed_emails(checker)
     if not destinataires:
         return False, "Aucun destinataire"
 
@@ -291,7 +293,7 @@ def envoyer_nouvel_ajout(checker, resa: dict) -> tuple:
     if not notifications_active():
         return False, "Notifications désactivées"
 
-    destinataires = checker.get_notification_emails()
+    destinataires = preferences.get_subscribed_emails(checker)
     if not destinataires:
         return False, "Aucun destinataire"
 
