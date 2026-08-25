@@ -80,10 +80,17 @@ def _envoyer_email(destinataires: list, sujet: str, corps_html: str) -> tuple:
 
     try:
         context = ssl.create_default_context()
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=30) as server:
-            server.starttls(context=context)
-            server.login(cfg["email"], cfg["password"])
-            server.send_message(msg)
+        port = cfg["port"]
+        # Essayer SMTP_SSL (port 465) si configuré, sinon SMTP avec STARTTLS (587)
+        if port == 465:
+            with smtplib.SMTP_SSL(cfg["host"], port, timeout=30, context=context) as server:
+                server.login(cfg["email"], cfg["password"])
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(cfg["host"], port, timeout=30) as server:
+                server.starttls(context=context)
+                server.login(cfg["email"], cfg["password"])
+                server.send_message(msg)
         return True, None
     except Exception as e:
         print(f"[Notifications] Erreur envoi email: {e}")
