@@ -53,7 +53,7 @@ def _smtp_config() -> dict:
 
 def notifications_active() -> bool:
     """Indique si l'envoi de notifications est activé (SMTP configuré)."""
-    if os.environ.get("NOTIF_ENABLED", "").lower() == "false":
+    if os.environ.get("NOTIF_ENABLED", os.environ.get("NOTIF_ENABLE", "")).lower() == "false":
         return False
     cfg = _smtp_config()
     return bool(cfg["email"] and cfg["password"])
