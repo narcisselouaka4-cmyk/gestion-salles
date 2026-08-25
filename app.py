@@ -1735,7 +1735,12 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        tab1, tab2, tab3, tab4 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Notifications", "Utilisateurs"])
+        is_admin = st.session_state.get("username", "") == os.environ.get("AUTH_USER", "")
+
+        if is_admin:
+            tab1, tab2, tab3, tab4 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Notifications", "Utilisateurs"])
+        else:
+            tab1, tab2, tab3 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Utilisateurs"])
 
         with tab1:
             onglet_gestion_salle(checker)
@@ -1743,11 +1748,14 @@ def main():
         with tab2:
             onglet_editer_planning(checker)
 
-        with tab3:
-            onglet_notifications(checker)
-
-        with tab4:
-            onglet_utilisateurs(checker, authenticator)
+        if is_admin:
+            with tab3:
+                onglet_notifications(checker)
+            with tab4:
+                onglet_utilisateurs(checker, authenticator)
+        else:
+            with tab3:
+                onglet_utilisateurs(checker, authenticator)
 
     elif authentication_status == False:
         st.error("❌ Mot de passe incorrect")
