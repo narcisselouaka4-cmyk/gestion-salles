@@ -215,11 +215,11 @@ def envoyer_recap_quotidien(checker, date_cible: date = None) -> tuple:
             print(f"[Notifications] Erreur récup occupations {salle}: {e}")
             occupations_par_salle[salle] = []
 
-    # S'il n'y a aucune occupation nulle part, on n'envoie pas
+    # S'il n'y a aucune occupation nulle part, on envoie quand même
+    # un email indiquant que toutes les salles sont libres
     total = sum(len(v) for v in occupations_par_salle.values())
     if total == 0:
-        print(f"[Notifications] Aucune occupation pour le {date_cible}, pas d'email envoyé")
-        return True, None
+        print(f"[Notifications] Aucune occupation pour le {date_cible}, email 'salles libres' envoyé")
 
     destinataires = preferences.get_subscribed_emails(checker)
     if not destinataires:

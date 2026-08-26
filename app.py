@@ -1339,7 +1339,11 @@ def onglet_notifications(checker):
                 with st.spinner("Envoi en cours..."):
                     success, error = notifications.envoyer_recap_quotidien(checker)
                     if success:
-                        st.success("✅ Récap envoyé ! Vérifiez votre boîte mail.")
+                        dests = preferences.get_subscribed_emails(checker)
+                        if dests:
+                            st.success(f"✅ Récap envoyé à {len(dests)} destinataire(s) : {', '.join(dests)}")
+                        else:
+                            st.warning("✅ Récap envoyé (aucun destinataire abonné).")
                     else:
                         st.error(f"❌ {error}")
     with col2:
@@ -1347,9 +1351,9 @@ def onglet_notifications(checker):
             if not active:
                 st.error("Notifications désactivées.")
             else:
-                emails = checker.get_notification_emails()
+                emails = preferences.get_subscribed_emails(checker)
                 if not emails:
-                    st.warning("Aucun email enregistré. Renseignez votre email ci-dessus.")
+                    st.warning("Aucun email abonné. Renseignez votre email dans les Réglages (⚙️) et abonnez-vous.")
                 else:
                     from datetime import date as _date
                     resa_test = {
