@@ -141,6 +141,49 @@ def set_user_email(username: str, email: str):
     set_pref(username, "email", email)
 
 
+def get_verif_email(username: str, checker=None) -> str:
+    """
+    Email utilisé pour la récupération de mot de passe.
+    Par défaut = email principal ; peut être surchargé (option avancée).
+    """
+    v = (get_pref(username, "verif_email", "") or "").strip()
+    if v:
+        return v
+    return get_user_email(username, checker)
+
+
+def set_verif_email(username: str, email: str):
+    """Définit un email de vérification distinct (vide = utiliser l'email principal)."""
+    set_pref(username, "verif_email", (email or "").strip())
+
+
+def find_username_by_email(checker, email: str) -> tuple:
+    """
+    Retrouve un utilisateur à partir d'un email (principal OU de vérification),
+    insensible à la casse. Cherche d'abord les préférences locales, puis le
+    Google Sheet. Retourne (username, data) ou (None, None).
+    """
+    email = (email or "").strip().lower()
+    if not email:
+        return None, None
+
+    data = _load_all()
+    for username, prefs in data.items():
+        for key in ("email", "verif_email"):
+            if (prefs.get(key) or "").strip().lower() == email:
+                return username, prefs
+
+    if checker is not None:
+        try:
+            uname, udata = checker.get_user_by_email(email)
+            if uname:
+                return uname, udata
+        except Exception:
+            pass
+
+    return None, None
+
+
 def get_subscribed_emails(checker) -> list:
     """
     Récupère la liste des emails des utilisateurs abonnés.

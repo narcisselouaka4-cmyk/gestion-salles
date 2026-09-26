@@ -107,13 +107,14 @@ st.markdown("""
     /* ── Responsive (mobile / tablette) ── */
     @media (max-width: 640px) {
         .main .block-container { padding: 1rem 1rem 3rem; }
-        /* Sidebar en plein écran sur mobile (aucun espace blanc à côté) */
-        section[data-testid="stSidebar"] {
+        /* Sidebar en plein écran sur mobile UNIQUEMENT quand elle est dépliée.
+           Repliée (aria-expanded="false"), on laisse Streamlit la masquer. */
+        section[data-testid="stSidebar"][aria-expanded="true"] {
             min-width: 100vw !important;
             width: 100vw !important;
             max-width: 100vw !important;
         }
-        section[data-testid="stSidebar"] > div { width: 100vw !important; }
+        section[data-testid="stSidebar"][aria-expanded="true"] > div { width: 100vw !important; }
         .kpi-value { font-size: 1.4rem !important; }
         .form-section, .glass-card, .detail-card { padding: 1.1rem !important; border-radius: 12px !important; }
         .stTabs [data-baseweb="tab"] { font-size: 0.8rem !important; padding: 0 0.5rem !important; }
@@ -1641,6 +1642,59 @@ def onglet_utilisateurs(checker, authenticator):
 # ═══════════════════════════════════════════════════════════
 # DIALOG DES RÉGLAGES (rouage ⚙️)
 # ═══════════════════════════════════════════════════════════
+def save_user_email(checker, username, email):
+    """
+    Enregistre l'email de l'utilisateur de façon PERSISTANTE (Google Sheet) et
+    en cache local. Un seul email pour tout : notifications ET vérification.
+    Retourne (ok, message).
+    """
+    email = (email or "").strip()
+    preferences.set_user_email(username, email)  # cache local
+    try:
+        ok, info = checker.update_user_email_google(username, email)
+    except Exception as e:
+        ok, info = False, str(e)
+    if ok:
+        return True, "Email enregistré."
+    # Le Sheet peut échouer (compte hors Sheet, ex. admin) : le cache local
+    # suffit pour la session en cours.
+    return True, "Email enregistré (localement)."
+
+
+def collapse_sidebar_on_mobile():
+    """
+    Sur mobile, Streamlit ouvre la barre latérale au chargement malgré
+    `initial_sidebar_state='collapsed'`. On la replie une seule fois par visite,
+    uniquement sur petit écran (desktop non affecté).
+    """
+    components.html(
+        """
+        <script>
+        (function(){
+          try {
+            var win = window.parent, doc = win.document;
+            if (win.__cfpdcSidebarInit) return;
+            if (win.innerWidth > 640) return;
+            win.__cfpdcSidebarInit = true;
+            function tryCollapse(n){
+              var sb = doc.querySelector('section[data-testid="stSidebar"]');
+              if (!sb){ if(n<25) setTimeout(function(){tryCollapse(n+1)},150); return; }
+              if (sb.getAttribute('aria-expanded') !== 'true') return;
+              var btn = doc.querySelector('[data-testid="stSidebarCollapseButton"] button')
+                     || doc.querySelector('[data-testid="stSidebarCollapseButton"]')
+                     || doc.querySelector('button[aria-label="Close sidebar"]');
+              if (btn){ btn.click(); return; }
+              if (n<25) setTimeout(function(){tryCollapse(n+1)},150);
+            }
+            setTimeout(function(){ tryCollapse(0); }, 250);
+          } catch(e){}
+        })();
+        </script>
+        """,
+        height=0,
+    )
+
+
 def render_email_prompt(checker):
     """
     Invite (via une modale) les utilisateurs sans email à en renseigner un,
@@ -1673,11 +1727,7 @@ def render_email_prompt(checker):
                 if not new_email or "@" not in new_email:
                     st.error("Veuillez saisir une adresse email valide.")
                 else:
-                    preferences.set_user_email(current_user, new_email.strip())
-                    try:
-                        checker.update_user_email_google(current_user, new_email.strip())
-                    except Exception:
-                        pass
+                    save_user_email(checker, current_user, new_email.strip())
                     st.session_state.email_prompt_done = True
                     st.success("✅ Email enregistré.")
                     st.rerun()
@@ -1710,14 +1760,37 @@ def render_settings_dialog(checker, authenticator):
             subscribed = preferences.is_subscribed(current_user)
 
             new_email = st.text_input("Votre email", value=current_email, placeholder="ex: jean.dupont@gmail.com", key="settings_email")
+            st.caption("Un seul email pour tout : notifications **et** récupération du mot de passe.")
 
             if st.button("💾 Enregistrer mon email", use_container_width=True):
                 if new_email and "@" not in new_email:
                     st.error("❌ Email invalide.")
                 else:
-                    preferences.set_user_email(current_user, new_email.strip())
-                    st.success("✅ Email enregistré.")
+                    ok, msg = save_user_email(checker, current_user, new_email.strip())
+                    st.success(f"✅ {msg}")
                     st.rerun()
+
+            # ── Option avancée : email de vérification distinct ──
+            cur_verif_raw = (preferences.get_pref(current_user, "verif_email", "") or "").strip()
+            with st.expander("Options avancées — email de récupération distinct", expanded=bool(cur_verif_raw)):
+                st.caption("Par défaut, la récupération du mot de passe utilise votre email ci-dessus. "
+                           "Vous pouvez ici définir un email différent, réservé à la récupération.")
+                verif_email = st.text_input(
+                    "Email de récupération (facultatif)",
+                    value=cur_verif_raw,
+                    placeholder="Laisser vide pour utiliser l'email principal",
+                    key="settings_verif_email",
+                )
+                if st.button("💾 Enregistrer l'email de récupération", use_container_width=True, key="settings_save_verif"):
+                    if verif_email and "@" not in verif_email:
+                        st.error("❌ Email invalide.")
+                    else:
+                        preferences.set_verif_email(current_user, verif_email.strip())
+                        if verif_email.strip():
+                            st.success("✅ Email de récupération distinct enregistré.")
+                        else:
+                            st.success("✅ Récupération remise sur l'email principal.")
+                        st.rerun()
 
             st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
 
@@ -1975,7 +2048,9 @@ def render_password_reset_flow(checker, authenticator):
                 if not email or "@" not in email:
                     st.error("Veuillez saisir une adresse email valide.")
                 else:
-                    username, data = checker.get_user_by_email(email)
+                    username, data = preferences.find_username_by_email(checker, email)
+                    if not data:
+                        data = {}
                     env_user = os.environ.get("AUTH_USER", "")
                     if username and username == env_user:
                         st.error("❌ Ce compte doit être réinitialisé par l'administrateur.")
@@ -2269,6 +2344,9 @@ def main():
             st.stop()
 
         render_sidebar(checker, authenticator)
+
+        # Replier la barre latérale au 1er chargement sur mobile
+        collapse_sidebar_on_mobile()
 
         # Démarrer le scheduler de notifications quotidiennes (thread daemon)
         try:
