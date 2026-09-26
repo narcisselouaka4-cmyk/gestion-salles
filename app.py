@@ -1899,12 +1899,20 @@ def render_login_screen(checker, authenticator):
 
         with st.container(border=True):
             if mode == "login":
-                authenticator.login(location='main', fields={
-                    'Form name': 'Se connecter',
-                    'Username': "Nom d'utilisateur",
-                    'Password': 'Mot de passe',
-                    'Login': 'Se connecter',
-                })
+                try:
+                    authenticator.login(location='main', fields={
+                        'Form name': 'Se connecter',
+                        'Username': "Nom d'utilisateur",
+                        'Password': 'Mot de passe',
+                        'Login': 'Se connecter',
+                    })
+                except Exception:
+                    # Cookie invalide (session expirée / compte supprimé) : on nettoie
+                    try:
+                        authenticator.cookie_controller.delete_cookie()
+                    except Exception:
+                        pass
+                    st.warning("Votre session a expiré. Actualisez la page (F5) puis reconnectez-vous.")
 
                 st.markdown("<div class='auth-divider'>ou</div>", unsafe_allow_html=True)
 
@@ -2026,7 +2034,21 @@ def main():
     )
 
     # Vérifier l'état d'authentification (cookie)
-    authenticator.login(location='unrendered')
+    # Un cookie périmé ou pointant vers un compte inexistant/supprimé fait lever
+    # LoginError par streamlit-authenticator : on l'intercepte pour ne pas planter
+    # l'app, on repart en "non connecté" et on nettoie le cookie invalide.
+    try:
+        authenticator.login(location='unrendered')
+    except Exception:
+        st.session_state['authentication_status'] = None
+        try:
+            authenticator.cookie_controller.delete_cookie()
+        except Exception:
+            pass
+        # Relancer une fois pour repartir d'un état propre (cookie supprimé)
+        if not st.session_state.get('_auth_cookie_reset'):
+            st.session_state['_auth_cookie_reset'] = True
+            st.rerun()
     authentication_status = st.session_state.get('authentication_status')
 
     if authentication_status is True:
