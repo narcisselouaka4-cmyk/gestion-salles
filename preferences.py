@@ -93,6 +93,33 @@ def set_notif_salles(username: str, salles: list):
     set_pref(username, "notif_salles", [s for s in salles if s in SALLES])
 
 
+def _default_heure() -> int:
+    try:
+        return int(os.environ.get("NOTIF_HEURE_QUOTIDIEN", "20"))
+    except (TypeError, ValueError):
+        return 20
+
+
+def get_notif_heure(username: str) -> int:
+    """Heure (0-23) à laquelle l'utilisateur veut recevoir son récap quotidien."""
+    val = get_pref(username, "notif_heure", None)
+    try:
+        h = int(val)
+    except (TypeError, ValueError):
+        return _default_heure()
+    return h if 0 <= h <= 23 else _default_heure()
+
+
+def set_notif_heure(username: str, heure: int):
+    """Définit l'heure d'envoi du récap pour un utilisateur."""
+    try:
+        h = int(heure)
+    except (TypeError, ValueError):
+        return
+    if 0 <= h <= 23:
+        set_pref(username, "notif_heure", h)
+
+
 def get_user_email(username: str, checker=None) -> str:
     """
     Récupère l'email d'un utilisateur.
@@ -174,6 +201,7 @@ def get_recipients(checker) -> list:
             "email": email,
             "jours": get_notif_jours(username),
             "salles": get_notif_salles(username),
+            "heure": get_notif_heure(username),
         })
 
     # 2. Utilisateurs du Google Sheet sans préférence locale (défauts)
@@ -194,6 +222,7 @@ def get_recipients(checker) -> list:
                     "email": email,
                     "jours": list(JOURS),
                     "salles": list(SALLES),
+                    "heure": _default_heure(),
                 })
         except Exception:
             pass

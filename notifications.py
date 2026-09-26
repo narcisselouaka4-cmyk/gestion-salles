@@ -220,6 +220,29 @@ def _occupations_du_jour(checker, date_cible: date) -> dict:
     return occupations_par_salle
 
 
+def _envoyer_recap_a_destinataire(r: dict, date_cible: date, occupations_par_salle: dict, sujet: str) -> tuple:
+    """
+    Envoie (ou non) le récap personnalisé à UN destinataire.
+    Retourne (status, detail) avec status ∈ {"sent", "ignored", "error"}.
+    """
+    weekday = date_cible.weekday()
+    if weekday not in r.get("jours", preferences.JOURS):
+        return "ignored", "jour désactivé"
+
+    salles_suivies = r.get("salles", preferences.SALLES)
+    occ_filtre = {
+        s: occupations_par_salle.get(s, [])
+        for s in salles_suivies
+        if occupations_par_salle.get(s)
+    }
+    if not occ_filtre:
+        return "ignored", "aucune salle suivie occupée"
+
+    html = _html_recap(date_cible, occ_filtre)
+    success, error = _envoyer_email([r["email"]], sujet, html)
+    return ("sent", None) if success else ("error", error)
+
+
 def envoyer_recap_quotidien(checker, date_cible: date = None) -> tuple:
     """
     Envoie, la veille pour le lendemain, un récap PERSONNALISÉ à chaque
@@ -246,28 +269,13 @@ def envoyer_recap_quotidien(checker, date_cible: date = None) -> tuple:
 
     envoyes, ignores, erreurs = 0, 0, []
     for r in recipients:
-        # Jour désactivé pour ce destinataire ?
-        if weekday not in r.get("jours", preferences.JOURS):
-            ignores += 1
-            continue
-
-        # Filtrer sur les salles suivies + occupées uniquement
-        salles_suivies = r.get("salles", preferences.SALLES)
-        occ_filtre = {
-            s: occupations_par_salle.get(s, [])
-            for s in salles_suivies
-            if occupations_par_salle.get(s)
-        }
-        if not occ_filtre:
-            ignores += 1  # aucune salle suivie occupée → pas d'email
-            continue
-
-        html = _html_recap(date_cible, occ_filtre)
-        success, error = _envoyer_email([r["email"]], sujet, html)
-        if success:
+        status, detail = _envoyer_recap_a_destinataire(r, date_cible, occupations_par_salle, sujet)
+        if status == "sent":
             envoyes += 1
+        elif status == "ignored":
+            ignores += 1
         else:
-            erreurs.append(f"{r['email']}: {error}")
+            erreurs.append(f"{r['email']}: {detail}")
 
     if erreurs:
         return (envoyes > 0), f"{envoyes} envoyé(s), {ignores} ignoré(s). Erreurs: {'; '.join(erreurs)}"
@@ -458,8 +466,9 @@ class NotifScheduler:
         self.checker = checker
         self._thread = None
         self._stop_event = threading.Event()
-        # Mémorise (date, envoyé) pour ne pas envoyer deux fois le même jour
-        self._dernier_envoi = None
+        # Mémorise, par utilisateur, la date du dernier traitement (envoi ou
+        # ignoré) pour ne pas renvoyer deux fois le même jour.
+        self._envois = {}
 
     @classmethod
     def demarrer(cls, checker):
@@ -474,7 +483,7 @@ class NotifScheduler:
     def _start_thread(self):
         self._thread = threading.Thread(target=self._boucle, daemon=True)
         self._thread.start()
-        print(f"[Notifications] Scheduler démarré — envoi quotidien à {HEURE_ENVOI_QUOTIDIEN}h")
+        print(f"[Notifications] Scheduler démarré — heure d'envoi par défaut {HEURE_ENVOI_QUOTIDIEN}h (personnalisable par utilisateur)")
 
     def _boucle(self):
         # Vérifie toutes les 15 minutes
@@ -492,16 +501,36 @@ class NotifScheduler:
         maintenant = datetime.now()
         aujourdhui = maintenant.date()
 
-        # Déjà envoyé aujourd'hui ?
-        if self._dernier_envoi == aujourdhui:
+        try:
+            recipients = preferences.get_recipients(self.checker)
+        except Exception as e:
+            print(f"[Notifications] Erreur récupération destinataires: {e}")
+            return
+        if not recipients:
             return
 
-        # Heure d'envoi atteinte ?
-        if maintenant.hour >= HEURE_ENVOI_QUOTIDIEN:
-            print(f"[Notifications] Envoi du récap quotidien pour le {aujourdhui + timedelta(days=1)}")
-            success, error = envoyer_recap_quotidien(self.checker)
-            if success:
-                self._dernier_envoi = aujourdhui
-                print("[Notifications] Récap quotidien envoyé")
-            elif error:
-                print(f"[Notifications] Échec récap quotidien: {error}")
+        # Destinataires dont l'heure choisie est atteinte et pas encore traités aujourd'hui
+        dus = [
+            r for r in recipients
+            if self._envois.get(r["username"]) != aujourdhui
+            and maintenant.hour >= r.get("heure", HEURE_ENVOI_QUOTIDIEN)
+        ]
+        if not dus:
+            return
+
+        date_cible = aujourdhui + timedelta(days=1)
+        occupations = _occupations_du_jour(self.checker, date_cible)
+        sujet = f"Salles occupées — {format_date_fr(date_cible)}"
+
+        for r in dus:
+            try:
+                status, detail = _envoyer_recap_a_destinataire(r, date_cible, occupations, sujet)
+                if status in ("sent", "ignored"):
+                    # Traité pour aujourd'hui (évite les renvois toutes les 15 min)
+                    self._envois[r["username"]] = aujourdhui
+                    if status == "sent":
+                        print(f"[Notifications] Récap envoyé à {r['email']} (heure {r.get('heure')}h)")
+                else:
+                    print(f"[Notifications] Échec récap {r['email']}: {detail}")
+            except Exception as e:
+                print(f"[Notifications] Erreur envoi récap {r.get('email')}: {e}")

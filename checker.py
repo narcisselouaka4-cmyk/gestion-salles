@@ -1157,30 +1157,68 @@ class SalleChecker:
         except Exception as e:
             return False, f"Erreur ajout Google Sheets: {str(e)}"
 
+    @staticmethod
+    def _periodes_imprecises(horaire_str: str) -> set:
+        """
+        Classe un horaire imprécis (texte sans heure claire) en « périodes ».
+        Insensible à la casse et à la graphie exacte de soir/nuit.
+        Une période vide (aucun mot-clé reconnu) est traitée comme 'journee'
+        (occupation toute la journée) — donc en conflit avec tout imprécis.
+        """
+        s = (horaire_str or "").lower()
+        periodes = set()
+        if "soir" in s or "nuit" in s:
+            periodes.add("soir_nuit")
+        if "matin" in s:
+            periodes.add("matin")
+        if "midi" in s or "aprem" in s or "après-midi" in s or "apres-midi" in s or "après midi" in s or "apres midi" in s:
+            periodes.add("midi")
+        if "journ" in s:  # journée / journee / jour
+            periodes.add("journee")
+        return periodes or {"journee"}
+
+    @classmethod
+    def _imprecis_en_conflit(cls, horaire_a: str, horaire_b: str) -> bool:
+        """Deux horaires imprécis se chevauchent-ils ? (soir/nuit, journée, etc.)"""
+        pa = cls._periodes_imprecises(horaire_a)
+        pb = cls._periodes_imprecises(horaire_b)
+        if "journee" in pa or "journee" in pb:
+            return True
+        return bool(pa & pb)
+
     def check_reservation_conflict(self, salle_name: str, d: date, horaire_str: str) -> list:
         """
         Vérifie si une nouvelle réservation (salle + date + horaire) entre en conflit
         avec les occupations déjà existantes (planning fixe + réservations ponctuelles).
+        Gère deux cas :
+          - horaires précis : chevauchement d'intervalles horaires ;
+          - horaires imprécis (« soir », « nuit », etc.) : conflit si les périodes
+            se recouvrent (soir+soir, soir+nuit, nuit+nuit, journée, …).
         Retourne une liste d'occupations en conflit (vide si aucun conflit).
         """
         conflits = []
+
+        # L'horaire de la nouvelle réservation est-il précis ?
         try:
             debut_new, fin_new = parse_horaire(horaire_str)
+            new_precis = True
         except Exception:
-            # Horaire non parseable → on ne peut pas vérifier
-            return conflits
+            debut_new = fin_new = None
+            new_precis = False
 
-        # 1. Conflits avec le planning fixe
-        try:
-            fixed = self.get_all_fixed_occupations(salle_name, d)
-            for occ in fixed:
+        def _occ_imprecise(occ) -> bool:
+            debut = occ.get("debut")
+            fin = occ.get("fin")
+            return ("warning" in occ) or (debut == time(0, 0) and fin == time(23, 59))
+
+        def _examiner(occ):
+            existante_imprecise = _occ_imprecise(occ)
+            if new_precis and not existante_imprecise:
+                # Précis vs précis → chevauchement d'intervalles
                 debut = occ.get("debut")
                 fin = occ.get("fin")
                 if not isinstance(debut, time) or not isinstance(fin, time):
-                    continue
-                if debut == time(0, 0) and fin == time(23, 59) and "warning" in occ:
-                    continue
-                # Chevauchement d'intervalles
+                    return
                 start_a = self._time_to_minutes(debut_new)
                 end_a = self._time_to_minutes(fin_new)
                 if end_a <= start_a:
@@ -1192,33 +1230,28 @@ class SalleChecker:
                 if start_a < end_b and start_b < end_a:
                     occ["salle"] = salle_name
                     conflits.append(occ)
+            elif not new_precis and existante_imprecise:
+                # Imprécis vs imprécis → conflit de périodes (soir/nuit…)
+                if self._imprecis_en_conflit(horaire_str, occ.get("horaire", "")):
+                    occ["salle"] = salle_name
+                    conflits.append(occ)
+            # Sinon (précis vs imprécis) : on ne peut pas comparer de façon fiable → ignoré
+
+        # 1. Planning fixe
+        try:
+            for occ in self.get_all_fixed_occupations(salle_name, d):
+                _examiner(occ)
         except Exception as e:
             print(f"[check_reservation_conflict] Erreur planning fixe: {e}")
 
-        # 2. Conflits avec les réservations ponctuelles Google Sheets
+        # 2. Réservations ponctuelles Google Sheets
         try:
             reservations, error = self.get_all_reservations_google(salle_name, d)
             if error:
                 print(f"[check_reservation_conflict] Erreur Google Sheets: {error}")
                 return conflits
             for occ in reservations:
-                debut = occ.get("debut")
-                fin = occ.get("fin")
-                if not isinstance(debut, time) or not isinstance(fin, time):
-                    continue
-                if debut == time(0, 0) and fin == time(23, 59) and "warning" in occ:
-                    continue
-                start_a = self._time_to_minutes(debut_new)
-                end_a = self._time_to_minutes(fin_new)
-                if end_a <= start_a:
-                    end_a += 24 * 60
-                start_b = self._time_to_minutes(debut)
-                end_b = self._time_to_minutes(fin)
-                if end_b <= start_b:
-                    end_b += 24 * 60
-                if start_a < end_b and start_b < end_a:
-                    occ["salle"] = salle_name
-                    conflits.append(occ)
+                _examiner(occ)
         except Exception as e:
             print(f"[check_reservation_conflict] Erreur réservations: {e}")
 
@@ -1275,17 +1308,20 @@ class SalleChecker:
             return overlaps
 
         segments = []
+        imprecis = []
         for occ in occupations:
             debut = occ.get("debut")
             fin = occ.get("fin")
             if not isinstance(debut, time) or not isinstance(fin, time):
                 continue
 
-            # Ignorer les occupations avec horaire non precise (00:00-23:59 + warning)
+            # Occupation avec horaire non précis (00:00-23:59 + warning) :
+            # comparée séparément par périodes (soir/nuit…)
             is_full_day_placeholder = (
                 debut == time(0, 0) and fin == time(23, 59) and "warning" in occ
             )
             if is_full_day_placeholder:
+                imprecis.append(occ)
                 continue
 
             start_min = self._time_to_minutes(debut)
@@ -1318,6 +1354,23 @@ class SalleChecker:
                         "message": (
                             f"{a['occupant']} ({a['horaire']}) et "
                             f"{b['occupant']} ({b['horaire']}) se chevauchent"
+                        )
+                    })
+
+        # Conflits entre occupations imprécises (soir/nuit, journée…)
+        for i in range(len(imprecis)):
+            for j in range(i + 1, len(imprecis)):
+                a = imprecis[i]
+                b = imprecis[j]
+                if self._imprecis_en_conflit(a.get("horaire", ""), b.get("horaire", "")):
+                    fa = {"occupant": a.get("occupant", "Inconnu"), "horaire": a.get("horaire", "—"), "source": a.get("source", ""), "occ": a}
+                    fb = {"occupant": b.get("occupant", "Inconnu"), "horaire": b.get("horaire", "—"), "source": b.get("source", ""), "occ": b}
+                    overlaps.append({
+                        "first": fa,
+                        "second": fb,
+                        "message": (
+                            f"{fa['occupant']} ({fa['horaire']}) et "
+                            f"{fb['occupant']} ({fb['horaire']}) se chevauchent"
                         )
                     })
 

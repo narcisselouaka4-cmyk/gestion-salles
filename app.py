@@ -468,6 +468,14 @@ st.markdown("""
         box-shadow: none !important;
     }
 
+    /* Flou de l'arrière-plan quand une modale (dialog) est ouverte */
+    [data-testid="stAppViewContainer"]:has([data-testid="stDialog"]) [data-testid="stMain"],
+    [data-testid="stAppViewContainer"]:has([data-testid="stDialog"]) section[data-testid="stSidebar"] {
+        filter: blur(3px);
+        transition: filter 0.15s ease;
+        pointer-events: none;
+    }
+
     /* Expander override */
     div[data-testid="stExpander"] {
         border: 1px solid var(--hairline) !important;
@@ -525,51 +533,61 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════
 # THÈME CLAIR / SOMBRE (bascule manuelle, déterministe)
 # ═══════════════════════════════════════════════════════════
-_THEME_DARK = """
+# La portée du thème couvre la zone principale ET les modales (dialogs),
+# mais jamais la sidebar (qui reste sombre).
+_SC = ':is([data-testid="stMain"],[data-testid="stDialog"])'
+
+_THEME_DARK = f"""
 <style>
-    [data-testid="stAppViewContainer"] { background-color: #0e1117 !important; }
-    [data-testid="stHeader"] { background: transparent !important; }
-    [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3,
-    [data-testid="stMain"] h4, [data-testid="stMain"] h5, [data-testid="stMain"] p,
-    [data-testid="stMain"] span, [data-testid="stMain"] label, [data-testid="stMain"] li,
-    [data-testid="stMain"] .stMarkdown { color: #e6e9ef; }
-    [data-testid="stMain"] [data-testid="stCaptionContainer"] * { color: #9aa4b2 !important; }
-    [data-testid="stMain"] input, [data-testid="stMain"] textarea,
-    [data-testid="stMain"] [data-baseweb="input"], [data-testid="stMain"] [data-baseweb="base-input"],
-    [data-testid="stMain"] [data-baseweb="select"] > div, [data-testid="stMain"] [data-baseweb="textarea"] {
+    [data-testid="stAppViewContainer"] {{ background-color: #0e1117 !important; }}
+    [data-testid="stHeader"] {{ background: transparent !important; }}
+    [data-testid="stDialog"] > div, [data-testid="stDialog"] [role="dialog"] {{
+        background-color: #161b26 !important;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
+    }}
+    {_SC} h1, {_SC} h2, {_SC} h3, {_SC} h4, {_SC} h5, {_SC} p,
+    {_SC} span, {_SC} label, {_SC} li, {_SC} .stMarkdown {{ color: #e6e9ef; }}
+    {_SC} [data-testid="stCaptionContainer"] * {{ color: #9aa4b2 !important; }}
+    {_SC} input, {_SC} textarea,
+    {_SC} [data-baseweb="input"], {_SC} [data-baseweb="base-input"],
+    {_SC} [data-baseweb="select"] > div, {_SC} [data-baseweb="textarea"] {{
         background-color: #1b2130 !important;
         color: #e6e9ef !important;
         border-color: rgba(255,255,255,0.14) !important;
-    }
-    [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] { border-color: rgba(255,255,255,0.10) !important; }
-    [data-testid="stMain"] div[data-testid="stButton"] > button[kind="secondary"],
-    [data-testid="stMain"] div[data-testid="stButton"] > button[kind="secondaryFormSubmit"],
-    [data-testid="stMain"] button[kind="secondaryFormSubmit"] {
+    }}
+    {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(255,255,255,0.10) !important; }}
+    {_SC} div[data-testid="stButton"] > button[kind="secondary"],
+    {_SC} div[data-testid="stButton"] > button[kind="secondaryFormSubmit"],
+    {_SC} button[kind="secondaryFormSubmit"] {{
         background-color: #1b2130 !important;
         color: #e6e9ef !important;
         border-color: rgba(255,255,255,0.16) !important;
-    }
-    .kpi-card, .glass-card, .detail-card { background: rgba(255,255,255,0.04) !important; }
+    }}
+    .kpi-card, .glass-card, .detail-card {{ background: rgba(255,255,255,0.04) !important; }}
 </style>
 """
 
-_THEME_LIGHT = """
+_THEME_LIGHT = f"""
 <style>
-    [data-testid="stAppViewContainer"] { background-color: #ffffff !important; }
-    [data-testid="stHeader"] { background: transparent !important; }
-    [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3,
-    [data-testid="stMain"] h4, [data-testid="stMain"] h5, [data-testid="stMain"] p,
-    [data-testid="stMain"] span, [data-testid="stMain"] label, [data-testid="stMain"] li,
-    [data-testid="stMain"] .stMarkdown { color: #1e293b; }
-    [data-testid="stMain"] [data-testid="stCaptionContainer"] * { color: #64748b !important; }
-    [data-testid="stMain"] input, [data-testid="stMain"] textarea,
-    [data-testid="stMain"] [data-baseweb="input"], [data-testid="stMain"] [data-baseweb="base-input"],
-    [data-testid="stMain"] [data-baseweb="select"] > div, [data-testid="stMain"] [data-baseweb="textarea"] {
+    [data-testid="stAppViewContainer"] {{ background-color: #ffffff !important; }}
+    [data-testid="stHeader"] {{ background: transparent !important; }}
+    [data-testid="stDialog"] > div, [data-testid="stDialog"] [role="dialog"] {{
+        background-color: #ffffff !important;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
+    }}
+    {_SC} h1, {_SC} h2, {_SC} h3, {_SC} h4, {_SC} h5, {_SC} p,
+    {_SC} span, {_SC} label, {_SC} li, {_SC} .stMarkdown {{ color: #1e293b; }}
+    {_SC} [data-testid="stCaptionContainer"] * {{ color: #64748b !important; }}
+    {_SC} input, {_SC} textarea,
+    {_SC} [data-baseweb="input"], {_SC} [data-baseweb="base-input"],
+    {_SC} [data-baseweb="select"] > div, {_SC} [data-baseweb="textarea"] {{
         background-color: #f8fafc !important;
         color: #1e293b !important;
         border-color: rgba(0,0,0,0.12) !important;
-    }
-    [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] { border-color: rgba(0,0,0,0.10) !important; }
+    }}
+    {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(0,0,0,0.10) !important; }}
 </style>
 """
 
@@ -1045,27 +1063,158 @@ def onglet_gestion_salle(checker):
                     if st.checkbox(s, value=True, key=f"gs_show_{i}"):
                         selected.append(s)
 
+        gs_search_clicked = st.button(
+            "🔍 Rechercher", type="primary", use_container_width=True, key="gs_search"
+        )
+
     st.session_state.global_date = d
 
-    if not selected:
-        st.info("Sélectionnez au moins une salle à afficher.")
+    # La recherche n'est déclenchée qu'au clic (évite de tout recharger
+    # à chaque changement de date ou de case).
+    if gs_search_clicked:
+        if not selected:
+            st.session_state.pop("gs_search", None)
+            st.warning("Sélectionnez au moins une salle à afficher.")
+        else:
+            st.session_state.gs_search = {"date": d, "salles": selected}
+
+    search = st.session_state.get("gs_search")
+    if not search:
+        st.info("Choisissez une date et les salles à consulter, puis cliquez sur **Rechercher**.")
         return
 
+    sd = search["date"]
     st.markdown(
         f"<div style='margin:0.5rem 0 1rem;color:#94a3b8;font-size:0.9rem;'>"
-        f"Disponibilités du <strong>{format_date_fr(d)}</strong></div>",
+        f"Disponibilités du <strong>{format_date_fr(sd)}</strong></div>",
         unsafe_allow_html=True,
     )
 
     # Affichage dans l'ordre hiérarchique : principale → fond → milieu
     for s in SALLES_ORDER_DISPLAY:
-        if s in selected:
-            render_salle_section(checker, s, d)
+        if s in search["salles"]:
+            render_salle_section(checker, s, sd)
 
 
 # ═══════════════════════════════════════════════════════════
 # ONGLET 2 — PLANNING & RÉSERVATIONS
 # ═══════════════════════════════════════════════════════════
+def render_reservations_salle(checker, salle_name, d):
+    """Liste et édition des réservations ponctuelles d'une salle pour une date."""
+    skey = salle_name.lower().replace(" ", "_")
+    try:
+        result = checker.get_all_occupations(salle_name.lower(), d)
+    except Exception as e:
+        with st.container(border=True):
+            st.markdown(f"**{salle_name}**")
+            st.error(f"Erreur : {e}")
+        return
+
+    all_occ = result.get("occupations", [])
+    reservations = [o for o in all_occ if o.get("source") == "réservation"]
+    overlaps = result.get("overlaps", [])
+    unprecise = result.get("unprecise", [])
+
+    with st.container(border=True):
+        st.markdown(
+            f"<div style='font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;'>{salle_name}</div>",
+            unsafe_allow_html=True,
+        )
+
+        if overlaps:
+            st.warning("⚠️ Conflits d'horaire détectés")
+            for ov in overlaps:
+                st.markdown(
+                    f"• **{ov['first']['occupant']}** ({ov['first']['horaire']}) chevauche "
+                    f"**{ov['second']['occupant']}** ({ov['second']['horaire']})"
+                )
+        if unprecise:
+            st.warning("⚠️ Horaires non précisés — certains créneaux n'ont pas d'heure claire")
+            for u in unprecise:
+                st.markdown(f"• **{u['occupant']}** : {u['horaire']}")
+
+        if not reservations:
+            st.info(f"Aucune réservation ponctuelle le {format_date_fr(d)}.")
+            return
+
+        st.markdown(
+            f"<div style='font-size:0.8rem;font-weight:600;color:#94a3b8;text-transform:uppercase;"
+            f"letter-spacing:0.05em;margin-bottom:0.5rem;'>{len(reservations)} réservation(s)</div>",
+            unsafe_allow_html=True,
+        )
+
+        for idx, occ in enumerate(reservations):
+            st.markdown(render_reservation_row(occ, idx), unsafe_allow_html=True)
+            with st.expander("Modifier"):
+                with st.form(key=f"ep_edit_{skey}_{idx}", border=False):
+                    ec1, ec2, ec3 = st.columns(3)
+                    with ec1:
+                        new_nom = st.text_input("Nom", value=occ.get('occupant', ''), key=f"ep_nom_{skey}_{idx}")
+                        new_horaire = st.text_input("Horaire", value=occ.get('horaire', ''), placeholder="15H30 - 18H00", key=f"ep_horaire_{skey}_{idx}")
+                        new_date_str = st.text_input("Date (JJ/MM/AA)", value=d.strftime("%d/%m/%y"), key=f"ep_datestr_{skey}_{idx}")
+                    with ec2:
+                        new_accompte = st.text_input("Accompte (€)", value=occ.get('accompte', ''), key=f"ep_acc_{skey}_{idx}")
+                        new_reste = st.text_input("Reste (€)", value=occ.get('reste_a_payer', ''), key=f"ep_reste_{skey}_{idx}")
+                        new_prix = st.text_input("Prix loc. (€)", value=occ.get('prix_location', ''), key=f"ep_prix_{skey}_{idx}")
+                    with ec3:
+                        new_caution = st.text_input("Caution", value=occ.get('caution_menage', ''), key=f"ep_cau_{skey}_{idx}")
+                        new_telephone = st.text_input("Téléphone", value=occ.get('telephone', ''), key=f"ep_tel_{skey}_{idx}")
+                        new_salle_occ = st.text_input("Salle", value=occ.get('salle', ''), key=f"ep_so_{skey}_{idx}")
+
+                    b1, b2, b3, b4 = st.columns([2, 1, 1, 1])
+                    with b1:
+                        submitted = st.form_submit_button("Sauvegarder", type="primary", use_container_width=True)
+                    with b2:
+                        clear_submitted = st.form_submit_button("Effacer infos", use_container_width=True)
+                    with b4:
+                        delete_submitted = st.form_submit_button("Supprimer", use_container_width=True)
+
+                    if submitted:
+                        old_occupant = occ.get('occupant', '')
+                        update_data = {}
+                        if new_nom != old_occupant:
+                            update_data['occupant'] = new_nom if new_nom else "Non renseigné"
+                        if new_horaire != occ.get('horaire', ''):
+                            update_data['horaire'] = new_horaire
+                        if new_date_str != d.strftime("%d/%m/%y"):
+                            update_data['date'] = new_date_str
+                        if new_salle_occ != occ.get('salle', ''):
+                            update_data['salle'] = new_salle_occ
+                        update_data['accompte'] = f"{new_accompte}€" if new_accompte and '€' not in new_accompte else (new_accompte if new_accompte else "")
+                        update_data['reste_a_payer'] = f"{new_reste}€" if new_reste and '€' not in new_reste else (new_reste if new_reste else "")
+                        update_data['prix_location'] = f"{new_prix}€" if new_prix and '€' not in new_prix else (new_prix if new_prix else "")
+                        update_data['caution_menage'] = new_caution if new_caution else ""
+                        update_data['telephone'] = new_telephone if new_telephone else ""
+                        update_data['salle_occupation'] = new_salle_occ if new_salle_occ else ""
+                        success, error = checker.update_reservation_google(salle_name.lower(), d, old_occupant.strip(), update_data)
+                        if success:
+                            st.session_state.ep_edit_success = "Modifications sauvegardées"
+                        else:
+                            st.session_state.ep_edit_error = error
+                        st.rerun()
+
+                    if clear_submitted:
+                        old_occupant = occ.get('occupant', '')
+                        success, error = checker.update_reservation_google(
+                            salle_name.lower(), d, old_occupant.strip(),
+                            {'accompte': "", 'reste_a_payer': "", 'prix_location': "", 'caution_menage': "", 'telephone': "", 'salle_occupation': ""}
+                        )
+                        if success:
+                            st.session_state.ep_edit_success = "Informations effacées"
+                        else:
+                            st.session_state.ep_edit_error = error
+                        st.rerun()
+
+                    if delete_submitted:
+                        old_occupant = occ.get('occupant', '')
+                        success, error = checker.delete_reservation_google(salle_name.lower(), d, old_occupant.strip())
+                        if success:
+                            st.session_state.ep_edit_success = "Réservation supprimée"
+                        else:
+                            st.session_state.ep_edit_error = error
+                        st.rerun()
+
+
 def onglet_editer_planning(checker):
     default_salle = st.session_state.get("global_salle", "Salle principale")
     default_date = st.session_state.get("global_date", datetime.now().date())
@@ -1078,15 +1227,8 @@ def onglet_editer_planning(checker):
     """, unsafe_allow_html=True)
 
     with st.container(border=True):
-        c1, c2, c3 = st.columns([2, 2, 1])
+        c1, c2 = st.columns([1, 2])
         with c1:
-            ep_salle = st.selectbox(
-                "SALLE",
-                options=["Salle principale", "Salle du fond", "Salle du milieu"],
-                index=["Salle principale", "Salle du fond", "Salle du milieu"].index(default_salle),
-                key="ep_salle"
-            )
-        with c2:
             ep_date = st.date_input(
                 "DATE",
                 value=default_date,
@@ -1094,34 +1236,31 @@ def onglet_editer_planning(checker):
                 max_value=date(2030, 12, 31),
                 key="ep_date"
             )
-        with c3:
-            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-            search_clicked = st.button("Rechercher", use_container_width=True, type="primary", key="ep_search")
+        with c2:
+            st.markdown(
+                "<div style='font-size:0.8rem;font-weight:600;text-transform:uppercase;"
+                "letter-spacing:0.05em;margin-bottom:0.35rem;'>Salles à afficher</div>",
+                unsafe_allow_html=True,
+            )
+            cols = st.columns(3)
+            ep_selected = []
+            for i, s in enumerate(SALLES_ORDER_DISPLAY):
+                with cols[i]:
+                    if st.checkbox(s, value=True, key=f"ep_show_{i}"):
+                        ep_selected.append(s)
 
-    needs_search = st.session_state.get("ep_needs_search", False)
-    if search_clicked or 'ep_occupations' in st.session_state or needs_search:
-        if search_clicked or needs_search:
-            if needs_search:
-                st.session_state.ep_needs_search = False
-            with st.spinner("Recherche en cours..."):
-                try:
-                    result = checker.get_all_occupations(ep_salle.lower(), ep_date)
-                    all_occ = result.get("occupations", [])
-                    res_ponctuelles = [o for o in all_occ if o.get("source") == "réservation"]
+        ep_search_clicked = st.button(
+            "🔍 Rechercher", type="primary", use_container_width=True, key="ep_search"
+        )
 
-                    st.session_state.ep_occupations = res_ponctuelles
-                    st.session_state.ep_res_salle = ep_salle
-                    st.session_state.ep_res_date = ep_date
-                    st.session_state.ep_target_date = ep_date
-                    st.session_state.ep_target_salle = ep_salle
-                    st.session_state.ep_overlaps = result.get("overlaps", [])
-                    st.session_state.ep_unprecise = result.get("unprecise", [])
+    st.session_state.global_date = ep_date
 
-                    if "error" in result:
-                        st.toast("Connexion Google Sheets impossible", icon="⚠️")
-                except Exception as e:
-                    st.error(f"Erreur : {str(e)}")
-                    st.session_state.ep_occupations = []
+    if ep_search_clicked:
+        if not ep_selected:
+            st.session_state.pop("ep_search", None)
+            st.warning("Sélectionnez au moins une salle à afficher.")
+        else:
+            st.session_state.ep_search = {"date": ep_date, "salles": ep_selected}
 
     if st.session_state.get("ep_edit_success"):
         st.success(st.session_state.ep_edit_success)
@@ -1132,127 +1271,13 @@ def onglet_editer_planning(checker):
         st.session_state.ep_edit_error = None
         st.session_state.ep_edit_success = None
 
-    if 'ep_occupations' in st.session_state:
-        occupations = st.session_state.ep_occupations
-        current_salle = st.session_state.get("ep_res_salle", ep_salle)
-        current_date = st.session_state.get("ep_res_date", ep_date)
-        ep_overlaps = st.session_state.get("ep_overlaps", [])
-        ep_unprecise = st.session_state.get("ep_unprecise", [])
-
-        # Avertissement en cas de chevauchement
-        if ep_overlaps:
-            with st.container():
-                st.warning("⚠️ **Conflits d'horaire détectés**")
-                for overlap in ep_overlaps:
-                    first = overlap["first"]
-                    second = overlap["second"]
-                    st.markdown(
-                        f"• **{first['occupant']}** ({first['horaire']}) chevauche "
-                        f"**{second['occupant']}** ({second['horaire']})",
-                        unsafe_allow_html=True
-                    )
-
-        # Avertissement si des horaires ne sont pas precises
-        if ep_unprecise:
-            with st.container():
-                st.warning("⚠️ **Horaires non précisés** — certains créneaux n'ont pas d'heure claire")
-                for u in ep_unprecise:
-                    st.markdown(
-                        f"• **{u['occupant']}** : {u['horaire']}",
-                        unsafe_allow_html=True
-                    )
-
-        if not occupations:
-            st.info(f"Aucune réservation ponctuelle pour **{current_salle}** le **{format_date_fr(current_date)}**.")
-        else:
-            st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <div style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">
-                    {len(occupations)} réservation(s)
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            for idx, occ in enumerate(occupations):
-                st.markdown(render_reservation_row(occ, idx), unsafe_allow_html=True)
-
-                with st.expander("Modifier"):
-                    with st.form(key=f"ep_edit_form_{idx}", border=False):
-                        ec1, ec2, ec3 = st.columns(3)
-                        with ec1:
-                            new_nom = st.text_input("Nom", value=occ.get('occupant', ''), key=f"ep_nom_{idx}")
-                            new_horaire = st.text_input("Horaire", value=occ.get('horaire', ''), placeholder="15H30 - 18H00", key=f"ep_horaire_{idx}")
-                            new_date_str = st.text_input("Date (JJ/MM/AA)", value=current_date.strftime("%d/%m/%y"), key=f"ep_date_str_{idx}")
-                        with ec2:
-                            new_accompte = st.text_input("Accompte (€)", value=occ.get('accompte', ''), key=f"ep_accompte_{idx}")
-                            new_reste = st.text_input("Reste (€)", value=occ.get('reste_a_payer', ''), key=f"ep_reste_{idx}")
-                            new_prix = st.text_input("Prix loc. (€)", value=occ.get('prix_location', ''), key=f"ep_prix_{idx}")
-                        with ec3:
-                            new_caution = st.text_input("Caution", value=occ.get('caution_menage', ''), key=f"ep_caution_{idx}")
-                            new_telephone = st.text_input("Téléphone", value=occ.get('telephone', ''), key=f"ep_telephone_{idx}")
-                            new_salle_occ = st.text_input("Salle", value=occ.get('salle', ''), key=f"ep_salle_occ_{idx}")
-
-                        btn1, btn2, btn3, btn4 = st.columns([2, 1, 1, 1])
-                        with btn1:
-                            submitted = st.form_submit_button("Sauvegarder", type="primary", use_container_width=True)
-                        with btn2:
-                            clear_submitted = st.form_submit_button("Effacer infos", use_container_width=True)
-                        with btn4:
-                            delete_submitted = st.form_submit_button("Supprimer", use_container_width=True)
-
-                        if submitted:
-                            old_occupant = occ.get('occupant', '')
-                            update_data = {}
-                            if new_nom != old_occupant:
-                                update_data['occupant'] = new_nom if new_nom else "Non renseigné"
-                            if new_horaire != occ.get('horaire', ''):
-                                update_data['horaire'] = new_horaire
-                            if new_date_str != current_date.strftime("%d/%m/%y"):
-                                update_data['date'] = new_date_str
-                            if new_salle_occ != occ.get('salle', ''):
-                                update_data['salle'] = new_salle_occ
-
-                            update_data['accompte'] = f"{new_accompte}€" if new_accompte and '€' not in new_accompte else (new_accompte if new_accompte else "")
-                            update_data['reste_a_payer'] = f"{new_reste}€" if new_reste and '€' not in new_reste else (new_reste if new_reste else "")
-                            update_data['prix_location'] = f"{new_prix}€" if new_prix and '€' not in new_prix else (new_prix if new_prix else "")
-                            update_data['caution_menage'] = new_caution if new_caution else ""
-                            update_data['telephone'] = new_telephone if new_telephone else ""
-                            update_data['salle_occupation'] = new_salle_occ if new_salle_occ else ""
-
-                            success, error = checker.update_reservation_google(
-                                current_salle.lower(), current_date, old_occupant.strip(), update_data
-                            )
-                            if success:
-                                st.session_state.ep_edit_success = "Modifications sauvegardées"
-                                st.session_state.ep_needs_search = True
-                            else:
-                                st.session_state.ep_edit_error = error
-                            st.rerun()
-
-                        if clear_submitted:
-                            old_occupant = occ.get('occupant', '')
-                            success, error = checker.update_reservation_google(
-                                current_salle.lower(), current_date, old_occupant.strip(),
-                                {'accompte': "", 'reste_a_payer': "", 'prix_location': "", 'caution_menage': "", 'telephone': "", 'salle_occupation': ""}
-                            )
-                            if success:
-                                st.session_state.ep_edit_success = "Informations effacées"
-                                st.session_state.ep_needs_search = True
-                            else:
-                                st.session_state.ep_edit_error = error
-                            st.rerun()
-
-                        if delete_submitted:
-                            old_occupant = occ.get('occupant', '')
-                            success, error = checker.delete_reservation_google(
-                                current_salle.lower(), current_date, old_occupant.strip()
-                            )
-                            if success:
-                                st.session_state.ep_edit_success = "Réservation supprimée"
-                                st.session_state.ep_needs_search = True
-                            else:
-                                st.session_state.ep_edit_error = error
-                            st.rerun()
+    ep_search = st.session_state.get("ep_search")
+    if ep_search:
+        for s in SALLES_ORDER_DISPLAY:
+            if s in ep_search["salles"]:
+                render_reservations_salle(checker, s, ep_search["date"])
+    else:
+        st.info("Choisissez une date et les salles à gérer, puis cliquez sur **Rechercher**.")
 
     st.markdown("<div style='margin: 2rem 0;'></div>", unsafe_allow_html=True)
 
@@ -1314,38 +1339,47 @@ def onglet_editer_planning(checker):
                     'added_by': st.session_state.get("username", "Inconnu"),
                 }
 
+                try:
+                    parsed_date = datetime.strptime(add_date_str, "%d/%m/%y").date()
+                except ValueError:
+                    try:
+                        parsed_date = datetime.strptime(add_date_str, "%d/%m/%Y").date()
+                    except ValueError:
+                        parsed_date = datetime.now().date()
+
+                # Détecter les conflits AVANT l'ajout (sinon la nouvelle
+                # réservation se retrouverait comparée à elle-même).
+                try:
+                    conflits = checker.check_reservation_conflict(
+                        add_salle_select.lower(), parsed_date, add_horaire
+                    )
+                except Exception as e:
+                    print(f"[App] Erreur vérification conflit: {e}")
+                    conflits = []
+
                 success, info = checker.add_reservation_google(new_data)
                 if success:
                     st.session_state.ep_add_success = f"Réservation ajoutée dans l'onglet '{info}'"
                     st.session_state.ep_add_error = None
-                    st.session_state.ep_needs_search = True
-                    try:
-                        parsed_date = datetime.strptime(add_date_str, "%d/%m/%y").date()
-                    except ValueError:
-                        try:
-                            parsed_date = datetime.strptime(add_date_str, "%d/%m/%Y").date()
-                        except ValueError:
-                            parsed_date = datetime.now().date()
-                    st.session_state.ep_target_date = parsed_date
-                    st.session_state.ep_target_salle = add_salle_select
+                    # Recentrer l'affichage sur la date/salle de l'ajout
+                    prev = st.session_state.get("ep_search") or {}
+                    salles = list(prev.get("salles") or SALLES_ORDER_DISPLAY)
+                    if add_salle_select not in salles:
+                        salles.append(add_salle_select)
+                    st.session_state.ep_search = {"date": parsed_date, "salles": salles}
 
                     # ── Notifications ──
-                    # (b) Alerte doublon : vérifier les conflits de créneau
-                    try:
-                        conflits = checker.check_reservation_conflict(
-                            add_salle_select.lower(), parsed_date, add_horaire
+                    # (b) Alerte doublon / chevauchement (créneaux précis OU imprécis)
+                    if conflits:
+                        for c in conflits:
+                            try:
+                                notifications.envoyer_alerte_doublon(checker, new_data, c)
+                            except Exception as e:
+                                print(f"[App] Erreur alerte doublon: {e}")
+                        st.session_state.ep_add_warning = (
+                            f"⚠️ Conflit détecté avec {len(conflits)} occupation(s) existante(s) "
+                            f"sur ce créneau — une alerte a été envoyée par email."
                         )
-                        if conflits:
-                            for c in conflits:
-                                notifications.envoyer_alerte_doublon(
-                                    checker, new_data, c
-                                )
-                            st.session_state.ep_add_warning = (
-                                f"⚠️ Conflit détecté avec {len(conflits)} occupation(s) existante(s) "
-                                f"sur ce créneau — une alerte a été envoyée par email."
-                            )
-                    except Exception as e:
-                        print(f"[App] Erreur vérification conflit: {e}")
 
                     # (c) Notification nouvel ajout
                     try:
@@ -1606,6 +1640,55 @@ def onglet_utilisateurs(checker, authenticator):
 # ═══════════════════════════════════════════════════════════
 # DIALOG DES RÉGLAGES (rouage ⚙️)
 # ═══════════════════════════════════════════════════════════
+def render_email_prompt(checker):
+    """
+    Invite (via une modale) les utilisateurs sans email à en renseigner un,
+    pour pouvoir récupérer leur mot de passe par code de vérification.
+    Affichée une fois par session (bouton « Plus tard » possible).
+    """
+    if st.session_state.get("email_prompt_done"):
+        return False
+    current_user = st.session_state.get("username", "")
+    if not current_user:
+        return False
+    try:
+        email = preferences.get_user_email(current_user, checker)
+    except Exception:
+        email = ""
+    if email:
+        return False
+
+    @st.dialog("📧 Ajoutez votre adresse email")
+    def _d():
+        st.markdown(
+            "Aucune adresse email n'est associée à votre compte.\n\n"
+            "Elle est **nécessaire** pour réinitialiser votre mot de passe en cas d'oubli "
+            "(vous recevrez un **code de vérification** par email)."
+        )
+        new_email = st.text_input("Votre email", placeholder="ex: jean.dupont@gmail.com", key="prompt_email_input")
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            if st.button("💾 Enregistrer mon email", type="primary", use_container_width=True):
+                if not new_email or "@" not in new_email:
+                    st.error("Veuillez saisir une adresse email valide.")
+                else:
+                    preferences.set_user_email(current_user, new_email.strip())
+                    try:
+                        checker.update_user_email_google(current_user, new_email.strip())
+                    except Exception:
+                        pass
+                    st.session_state.email_prompt_done = True
+                    st.success("✅ Email enregistré.")
+                    st.rerun()
+        with c2:
+            if st.button("Plus tard", use_container_width=True):
+                st.session_state.email_prompt_done = True
+                st.rerun()
+
+    _d()
+    return True
+
+
 def render_settings_dialog(checker, authenticator):
     """Affiche le dialog des réglages avancés (depuis le bouton rouage)."""
     if not st.session_state.get("show_settings", False):
@@ -1620,97 +1703,104 @@ def render_settings_dialog(checker, authenticator):
         st.markdown(f"**Compte connecté :** {current_user}")
         st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
 
-        # ── Section Notifications ──
-        st.markdown("### 📧 Notifications par email")
-        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+        # ── Section Notifications (repliable) ──
+        with st.expander("📧 Notifications par email", expanded=False):
+            current_email = preferences.get_user_email(current_user, checker)
+            subscribed = preferences.is_subscribed(current_user)
 
-        current_email = preferences.get_user_email(current_user, checker)
-        subscribed = preferences.is_subscribed(current_user)
+            new_email = st.text_input("Votre email", value=current_email, placeholder="ex: jean.dupont@gmail.com", key="settings_email")
 
-        new_email = st.text_input("Votre email", value=current_email, placeholder="ex: jean.dupont@gmail.com", key="settings_email")
-
-        if st.button("💾 Enregistrer mon email", use_container_width=True):
-            if new_email and "@" not in new_email:
-                st.error("❌ Email invalide.")
-            else:
-                preferences.set_user_email(current_user, new_email.strip())
-                st.success("✅ Email enregistré.")
-                st.rerun()
-
-        st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
-
-        notif_status = "✅ Abonné" if subscribed else "❌ Désabonné"
-        st.markdown(f"**Statut :** {notif_status}")
-
-        if subscribed:
-            if st.button("🔕 Me désabonner des notifications", use_container_width=True):
-                preferences.set_subscribed(current_user, False)
-                st.success("Vous êtes maintenant désabonné des notifications.")
-                st.rerun()
-        else:
-            if st.button("🔔 Me réabonner aux notifications", type="primary", use_container_width=True):
-                preferences.set_subscribed(current_user, True)
-                st.success("✅ Vous êtes maintenant abonné aux notifications.")
-                st.rerun()
-
-        # ── Préférences fines (jours + salles) ──
-        if subscribed:
-            st.markdown("<div style='margin: 1rem 0 0.5rem;'></div>", unsafe_allow_html=True)
-            st.markdown("**Mes préférences de notification**")
-            st.caption("Le récap est envoyé la veille pour le lendemain, uniquement si une salle suivie est occupée.")
-
-            jours_labels = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
-            salles_labels = {
-                "salle principale": "Salle principale",
-                "salle du fond": "Salle du fond",
-                "salle du milieu": "Salle du milieu",
-            }
-
-            cur_jours = preferences.get_notif_jours(current_user)
-            cur_salles = preferences.get_notif_salles(current_user)
-
-            with st.form(key="settings_notif_prefs_form", border=False):
-                sel_jours_labels = st.multiselect(
-                    "Jours concernés (jour du récap)",
-                    options=jours_labels,
-                    default=[jours_labels[j] for j in cur_jours],
-                    help="Décochez un jour pour ne pas recevoir le récap le concernant (ex. le dimanche).",
-                )
-                st.markdown("<div style='font-size:0.8rem;font-weight:600;margin:0.4rem 0 0.2rem;'>Salles suivies</div>", unsafe_allow_html=True)
-                sel_salles = []
-                cols = st.columns(3)
-                for i, (skey, slabel) in enumerate(salles_labels.items()):
-                    with cols[i]:
-                        if st.checkbox(slabel, value=(skey in cur_salles), key=f"notif_salle_{skey}"):
-                            sel_salles.append(skey)
-
-                prefs_submitted = st.form_submit_button("💾 Enregistrer mes préférences", use_container_width=True)
-                if prefs_submitted:
-                    sel_jours = [jours_labels.index(l) for l in sel_jours_labels]
-                    preferences.set_notif_jours(current_user, sel_jours)
-                    preferences.set_notif_salles(current_user, sel_salles)
-                    if not sel_jours or not sel_salles:
-                        st.warning("⚠️ Préférences enregistrées, mais aucun récap ne sera envoyé (aucun jour ou aucune salle sélectionné).")
-                    else:
-                        st.success("✅ Préférences enregistrées.")
-
-        # Test d'envoi (admin seulement)
-        if is_admin:
-            st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
-            st.markdown("#### 🧪 Test d'envoi")
-            import notifications as notif_mod
-            if st.button("📨 Envoyer le récap de demain"):
-                if not notif_mod.notifications_active():
-                    st.error("Notifications désactivées (SMTP non configuré).")
+            if st.button("💾 Enregistrer mon email", use_container_width=True):
+                if new_email and "@" not in new_email:
+                    st.error("❌ Email invalide.")
                 else:
-                    with st.spinner("Envoi..."):
-                        success, info = notif_mod.envoyer_recap_quotidien(checker)
-                        if success:
-                            st.success(f"✅ {info}")
-                        else:
-                            st.error(f"❌ {info}")
+                    preferences.set_user_email(current_user, new_email.strip())
+                    st.success("✅ Email enregistré.")
+                    st.rerun()
 
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
+
+            notif_status = "✅ Abonné" if subscribed else "❌ Désabonné"
+            st.markdown(f"**Statut :** {notif_status}")
+
+            if subscribed:
+                if st.button("🔕 Me désabonner des notifications", use_container_width=True):
+                    preferences.set_subscribed(current_user, False)
+                    st.success("Vous êtes maintenant désabonné des notifications.")
+                    st.rerun()
+            else:
+                if st.button("🔔 Me réabonner aux notifications", type="primary", use_container_width=True):
+                    preferences.set_subscribed(current_user, True)
+                    st.success("✅ Vous êtes maintenant abonné aux notifications.")
+                    st.rerun()
+
+            # ── Préférences (heure + jours + salles) ──
+            if subscribed:
+                st.markdown("<div style='margin: 1rem 0 0.5rem;'></div>", unsafe_allow_html=True)
+                st.markdown("**Mes préférences de notification**")
+                st.caption("La veille au soir, vous recevez la liste des salles occupées le lendemain. Rien n'est envoyé si tout est libre.")
+
+                jours_labels = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+                salles_labels = {
+                    "salle principale": "Salle principale",
+                    "salle du fond": "Salle du fond",
+                    "salle du milieu": "Salle du milieu",
+                }
+
+                cur_jours = preferences.get_notif_jours(current_user)
+                cur_salles = preferences.get_notif_salles(current_user)
+                cur_heure = preferences.get_notif_heure(current_user)
+
+                with st.form(key="settings_notif_prefs_form", border=False):
+                    hcol, _ = st.columns([1, 1])
+                    with hcol:
+                        sel_heure = st.selectbox(
+                            "Heure de réception",
+                            options=list(range(24)),
+                            index=cur_heure,
+                            format_func=lambda h: f"{h:02d}h00",
+                            help="Heure à laquelle vous recevez le récap, la veille.",
+                        )
+                    sel_jours_labels = st.multiselect(
+                        "Jours de réception",
+                        options=jours_labels,
+                        default=[jours_labels[j] for j in cur_jours],
+                        help="Décochez un jour pour ne pas recevoir le récap ce jour-là.",
+                    )
+                    st.markdown("<div style='font-size:0.8rem;font-weight:600;margin:0.4rem 0 0.2rem;'>Salles suivies</div>", unsafe_allow_html=True)
+                    sel_salles = []
+                    cols = st.columns(3)
+                    for i, (skey, slabel) in enumerate(salles_labels.items()):
+                        with cols[i]:
+                            if st.checkbox(slabel, value=(skey in cur_salles), key=f"notif_salle_{skey}"):
+                                sel_salles.append(skey)
+
+                    prefs_submitted = st.form_submit_button("💾 Enregistrer mes préférences", use_container_width=True)
+                    if prefs_submitted:
+                        sel_jours = [jours_labels.index(l) for l in sel_jours_labels]
+                        preferences.set_notif_heure(current_user, sel_heure)
+                        preferences.set_notif_jours(current_user, sel_jours)
+                        preferences.set_notif_salles(current_user, sel_salles)
+                        if not sel_jours or not sel_salles:
+                            st.warning("⚠️ Préférences enregistrées, mais aucun récap ne sera envoyé (aucun jour ou aucune salle sélectionné).")
+                        else:
+                            st.success("✅ Préférences enregistrées.")
+
+            # Test d'envoi (admin seulement)
+            if is_admin:
+                st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
+                st.markdown("#### 🧪 Test d'envoi")
+                import notifications as notif_mod
+                if st.button("📨 Envoyer le récap de demain"):
+                    if not notif_mod.notifications_active():
+                        st.error("Notifications désactivées (SMTP non configuré).")
+                    else:
+                        with st.spinner("Envoi..."):
+                            success, info = notif_mod.envoyer_recap_quotidien(checker)
+                            if success:
+                                st.success(f"✅ {info}")
+                            else:
+                                st.error(f"❌ {info}")
 
         # ── Section Mot de passe ──
         st.markdown("### 🔑 Modifier mon mot de passe")
@@ -2189,6 +2279,10 @@ def main():
 
         is_admin = st.session_state.get("username", "") == os.environ.get("AUTH_USER", "")
 
+        # Invitation à renseigner l'email (récupération de mot de passe).
+        # Prioritaire : si elle s'affiche, on n'ouvre pas d'autre modale.
+        email_prompt_open = render_email_prompt(checker)
+
         # Onglets principaux (Utilisateurs et Notifications sont dans le rouage ⚙️)
         if is_admin:
             tab1, tab2, tab3 = st.tabs(["Disponibilités", "Réservations", "Notifications"])
@@ -2205,8 +2299,10 @@ def main():
             with tab3:
                 onglet_notifications(checker)
 
-        # Dialog des réglages (rouage ⚙️ dans la sidebar)
-        render_settings_dialog(checker, authenticator)
+        # Dialog des réglages (rouage ⚙️ dans la sidebar) — jamais en même
+        # temps que la modale email (une seule modale à la fois).
+        if not email_prompt_open:
+            render_settings_dialog(checker, authenticator)
 
     elif authentication_status == False:
         st.error("❌ Mot de passe incorrect")
