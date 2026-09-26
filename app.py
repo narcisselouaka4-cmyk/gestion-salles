@@ -10,6 +10,7 @@ import streamlit_authenticator as stauth
 from datetime import datetime, time, date, timedelta
 import os
 import time as time_module
+import secrets
 
 try:
     from dotenv import load_dotenv
@@ -26,9 +27,9 @@ import preferences
 # ═══════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="CFPDC — Gestion des Salles",
-    page_icon="🏢",
+    page_icon="🕊️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ═══════════════════════════════════════════════════════════
@@ -47,7 +48,7 @@ st.markdown("""
     if (!document.querySelector('meta[name="theme-color"]')) {
         const meta = document.createElement('meta');
         meta.name = 'theme-color';
-        meta.content = '#4f46e5';
+        meta.content = '#2b5c9e';
         document.head.appendChild(meta);
     }
     // Apple touch icon
@@ -65,58 +66,87 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-    /* Pas de fond forcé — on laisse Streamlit gérer le thème */
+    :root {
+        --accent: #2b5c9e;
+        --accent-strong: #274b7f;
+        --accent-soft: rgba(43, 92, 158, 0.10);
+        --hairline: rgba(128, 128, 128, 0.16);
+        --surface: rgba(128, 128, 128, 0.05);
+        --surface-2: rgba(128, 128, 128, 0.08);
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Pas de fond forcé — on laisse Streamlit gérer le thème clair/sombre */
     .main .block-container {
-        max-width: 1400px;
-        padding: 2rem 3rem;
+        max-width: 1320px;
+        padding: 2rem 2.5rem 4rem;
     }
 
-    /* ── Sidebar ── */
+    /* ── Sidebar (fond ardoise sobre, adapté clair & sombre) ── */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-        border-right: none;
+        background: #0f172a !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
     }
-    section[data-testid="stSidebar"] .css-1d391kg {
-        background: transparent;
-    }
+    section[data-testid="stSidebar"] .block-container { padding-top: 1.25rem; }
+    section[data-testid="stSidebar"] .css-1d391kg { background: transparent; }
 
-    /* ── Typography ── */
-    h1 { font-weight: 800; letter-spacing: -0.03em; }
-    h2 { font-weight: 700; letter-spacing: -0.02em; }
-    h3 { font-weight: 600; }
+    /* ── Typographie ── */
+    h1 { font-weight: 700; letter-spacing: -0.02em; }
+    h2 { font-weight: 700; letter-spacing: -0.015em; }
+    h3 { font-weight: 600; letter-spacing: -0.01em; }
+
+    /* ── Responsive (mobile / tablette) ── */
+    @media (max-width: 640px) {
+        .main .block-container { padding: 1rem 1rem 3rem; }
+        /* Sidebar en plein écran sur mobile (aucun espace blanc à côté) */
+        section[data-testid="stSidebar"] {
+            min-width: 100vw !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+        }
+        section[data-testid="stSidebar"] > div { width: 100vw !important; }
+        .kpi-value { font-size: 1.4rem !important; }
+        .form-section, .glass-card, .detail-card { padding: 1.1rem !important; border-radius: 12px !important; }
+        .stTabs [data-baseweb="tab"] { font-size: 0.8rem !important; padding: 0 0.5rem !important; }
+        .res-row { flex-wrap: wrap; gap: 0.5rem !important; }
+        .res-time { min-width: auto !important; }
+    }
 
     /* ── KPI Cards ── */
     .kpi-card {
-        background: rgba(128,128,128,0.08);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(128,128,128,0.12);
-        border-radius: 20px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.04);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: var(--surface-2);
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius);
+        padding: 1.35rem 1.5rem;
+        box-shadow: var(--shadow);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
         position: relative;
         overflow: hidden;
     }
     .kpi-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
     }
     .kpi-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        border-radius: 20px 20px 0 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--accent);
     }
-    .kpi-card.success::before { background: linear-gradient(90deg, #10b981, #34d399); }
-    .kpi-card.warning::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-    .kpi-card.danger::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .kpi-card.success::before { background: #10b981; }
+    .kpi-card.warning::before { background: #d97706; }
+    .kpi-card.danger::before { background: #dc2626; }
 
     .kpi-label {
         font-size: 0.75rem;
@@ -139,12 +169,11 @@ st.markdown("""
 
     /* ── Glass Cards ── */
     .glass-card {
-        background: rgba(128,128,128,0.06);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(128,128,128,0.1);
-        border-radius: 24px;
-        padding: 2rem;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.04);
+        background: var(--surface);
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius);
+        padding: 1.75rem;
+        box-shadow: var(--shadow);
         margin-bottom: 1.5rem;
     }
 
@@ -216,8 +245,8 @@ st.markdown("""
         min-width: 100px;
         font-weight: 700;
         font-size: 0.85rem;
-        color: #4f46e5;
-        background: rgba(79,70,229,0.1);
+        color: #2b5c9e;
+        background: rgba(43,92,158,0.1);
         padding: 0.35rem 0.75rem;
         border-radius: 8px;
         text-align: center;
@@ -242,12 +271,12 @@ st.markdown("""
 
     /* ── Detail Card ── */
     .detail-card {
-        background: rgba(128,128,128,0.06);
-        border: 1px solid rgba(128,128,128,0.1);
-        border-radius: 20px;
-        padding: 1.75rem;
+        background: var(--surface);
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius);
+        padding: 1.5rem 1.6rem;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        box-shadow: var(--shadow);
         position: relative;
         overflow: hidden;
     }
@@ -257,9 +286,8 @@ st.markdown("""
         left: 0;
         top: 0;
         bottom: 0;
-        width: 5px;
-        background: linear-gradient(180deg, #6366f1, #8b5cf6);
-        border-radius: 20px 0 0 20px;
+        width: 3px;
+        background: var(--accent);
     }
     .detail-header {
         display: flex;
@@ -270,7 +298,7 @@ st.markdown("""
     .detail-time {
         font-size: 1.1rem;
         font-weight: 800;
-        color: #4f46e5;
+        color: #2b5c9e;
     }
     .detail-name {
         font-size: 1.25rem;
@@ -307,13 +335,15 @@ st.markdown("""
     }
 
     /* ── Form Section ── */
+    /* .form-section : les <div> bruts ne peuvent pas envelopper des widgets
+       Streamlit (le DOM se referme aussitôt). On neutralise donc la boîte
+       fantôme — le contenu est groupé via st.container(border=True). */
     .form-section {
-        background: rgba(128,128,128,0.06);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(128,128,128,0.1);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
+        display: block;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: none;
     }
     .form-section-title {
         font-size: 1rem;
@@ -352,56 +382,68 @@ st.markdown("""
         padding-top: 1.5rem;
     }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: rgba(128,128,128,0.08);
-        border-radius: 16px;
-        padding: 6px;
-        backdrop-filter: blur(10px);
+        gap: 6px;
+        background: var(--surface-2);
+        border-radius: var(--radius-sm);
+        padding: 5px;
+        flex-wrap: wrap;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 44px;
-        border-radius: 12px;
+        height: 40px;
+        border-radius: 6px;
         background: transparent;
         border: none;
         color: #94a3b8;
         font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.2s ease;
-        margin: 0 2px;
+        font-size: 0.92rem;
+        padding: 0 1.15rem;
+        white-space: nowrap;
+        transition: background 0.15s ease, color 0.15s ease;
+        margin: 0;
     }
+    .stTabs [data-baseweb="tab"] p { margin: 0; font-size: inherit; font-weight: inherit; }
     .stTabs [data-baseweb="tab"]:hover {
         color: inherit;
         background: rgba(128,128,128,0.1);
     }
     .stTabs [aria-selected="true"] {
-        background: rgba(128,128,128,0.15) !important;
-        color: #4f46e5 !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        background: var(--accent) !important;
+        color: #ffffff !important;
     }
+    .stTabs [data-baseweb="tab-highlight"],
+    .stTabs [data-baseweb="tab-border"] { display: none; }
 
     /* Buttons override */
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-        border: none;
-        border-radius: 12px;
+        background: var(--accent);
+        border: 1px solid var(--accent);
+        border-radius: var(--radius-sm);
         font-weight: 600;
-        padding: 0.6rem 1.5rem;
-        transition: all 0.2s ease;
+        padding: 0.55rem 1.4rem;
+        transition: background 0.15s ease, box-shadow 0.15s ease;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+        box-shadow: 0 3px 10px rgba(43, 92, 158, 0.25);
     }
     div[data-testid="stButton"] > button[kind="secondary"] {
-        border-radius: 12px;
+        border-radius: var(--radius-sm);
         font-weight: 500;
+    }
+
+    /* Form override — évite l'effet « carte dans la carte » (login) */
+    div[data-testid="stForm"] {
+        border: none !important;
+        padding: 0 !important;
+        box-shadow: none !important;
     }
 
     /* Expander override */
     div[data-testid="stExpander"] {
-        border: 1px solid rgba(128,128,128,0.12) !important;
-        border-radius: 16px !important;
-        background: rgba(128,128,128,0.04) !important;
+        border: 1px solid var(--hairline) !important;
+        border-radius: var(--radius) !important;
+        background: var(--surface) !important;
         margin-bottom: 0.75rem !important;
     }
     div[data-testid="stExpanderDetails"] {
@@ -420,12 +462,11 @@ st.markdown("""
 
     /* ── Auth Card ── */
     .auth-card {
-        background: rgba(128,128,128,0.06);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(128,128,128,0.1);
-        border-radius: 24px;
+        background: var(--surface);
+        border: 1px solid var(--hairline);
+        border-radius: 16px;
         padding: 2rem 2.25rem;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow);
     }
     .auth-divider {
         display: flex;
@@ -492,7 +533,7 @@ def render_timeline(occupations, start_hour=8, end_hour=23):
         return '<div style="text-align:center; padding:2rem; color:#94a3b8;">Aucune occupation sur ce créneau</div>'
 
     total_min = (end_hour - start_hour) * 60
-    colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6']
+    colors = ['#2b5c9e', '#3f7cc0', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6']
 
     segments = []
     current_min = 0
@@ -606,7 +647,7 @@ def render_reservation_row(occ, idx):
     if salle:
         tags.append(f'<span class="res-tag">{salle}</span>')
     if added_by:
-        tags.append(f'<span class="res-tag" style="background: rgba(79,70,229,0.12); color: #6366f1;">👤 {added_by}</span>')
+        tags.append(f'<span class="res-tag" style="background: rgba(43,92,158,0.12); color: #2b5c9e;">👤 {added_by}</span>')
 
     return f"""
     <div class="res-row animate-in" style="animation-delay: {idx * 0.05}s;">
@@ -644,18 +685,20 @@ def init_checker():
 def render_sidebar(checker, authenticator=None):
     with st.sidebar:
         # Logo
-        st.markdown("""
-        <div style="padding: 1rem 0 2rem 0; text-align: center;">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏢</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em;">CFPDC</div>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">Gestion des Salles</div>
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0 1.75rem;">
+            <div style="font-size: 1.9rem; line-height: 1;">🕊️</div>
+            <div style="line-height: 1.1;">
+                <div style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em;">CFPDC</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem;">Gestion des Salles</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         # ── Utilisateur connecté ──
         if st.session_state.get("name"):
             st.markdown(f"""
-            <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; border: 1px solid rgba(79,70,229,0.2);">
+            <div style="background: rgba(43,92,158,0.15); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; border: 1px solid rgba(43,92,158,0.2);">
                 <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Connecté</div>
                 <div style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin-top: 0.25rem;">👤 {st.session_state.get("name")}</div>
             </div>
@@ -800,180 +843,113 @@ def render_sidebar(checker, authenticator=None):
 # ═══════════════════════════════════════════════════════════
 # ONGLET 1 — DASHBOARD GESTION DE SALLE
 # ═══════════════════════════════════════════════════════════
+SALLES_ORDER_DISPLAY = ["Salle principale", "Salle du fond", "Salle du milieu"]
+
+
+def render_salle_section(checker, salle_name, d):
+    """Affiche la section d'une salle : statut, timeline et détails des occupations."""
+    try:
+        result = checker.get_all_occupations(salle_name.lower(), d)
+    except Exception as e:
+        with st.container(border=True):
+            st.markdown(f"**{salle_name}**")
+            st.error(f"Erreur de chargement : {e}")
+        return
+
+    occupations = result.get("occupations", [])
+    overlaps = result.get("overlaps", [])
+
+    total_revenus = 0
+    for occ in occupations:
+        prix_str = str(occ.get("prix_location", "")).replace("€", "").replace(" ", "")
+        try:
+            if prix_str:
+                total_revenus += float(prix_str)
+        except ValueError:
+            pass
+
+    occupee = bool(occupations)
+    pill_color = "#dc2626" if occupee else "#10b981"
+    pill_bg = "rgba(220,38,38,0.12)" if occupee else "rgba(16,185,129,0.12)"
+    pill_text = "OCCUPÉE" if occupee else "LIBRE"
+    revenus_html = f" · {total_revenus:.0f} €" if total_revenus > 0 else ""
+
+    with st.container(border=True):
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+            <div style="font-size:1.15rem;font-weight:700;letter-spacing:-0.01em;">{salle_name}</div>
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.05em;color:{pill_color};
+                        background:{pill_bg};padding:0.25rem 0.7rem;border-radius:999px;white-space:nowrap;">{pill_text}</div>
+        </div>
+        <div style="font-size:0.82rem;color:#94a3b8;margin:0.2rem 0 0.9rem;">{len(occupations)} occupation(s){revenus_html}</div>
+        """, unsafe_allow_html=True)
+
+        if overlaps:
+            st.warning("⚠️ Conflits d'horaire détectés")
+            for overlap in overlaps:
+                first = overlap["first"]
+                second = overlap["second"]
+                st.markdown(
+                    f"• **{first['occupant']}** ({first['horaire']}) chevauche "
+                    f"**{second['occupant']}** ({second['horaire']})"
+                )
+
+        st.markdown(render_timeline(occupations), unsafe_allow_html=True)
+
+        if occupations:
+            st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
+            for occ in occupations:
+                st.markdown(render_detail_card(occ), unsafe_allow_html=True)
+        else:
+            st.markdown(
+                "<div style='padding:0.4rem 0;color:#94a3b8;font-size:0.9rem;'>"
+                "Aucune occupation prévue — salle entièrement libre.</div>",
+                unsafe_allow_html=True,
+            )
+
+
 def onglet_gestion_salle(checker):
-    default_salle = st.session_state.get("global_salle", "Salle principale")
     default_date = st.session_state.get("global_date", datetime.now().date())
 
-    st.markdown("<div class='form-section'>", unsafe_allow_html=True)
+    with st.container(border=True):
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            d = st.date_input(
+                "DATE",
+                value=default_date,
+                min_value=date(2020, 1, 1),
+                max_value=date(2030, 12, 31),
+                key="gs_date",
+            )
+        with c2:
+            st.markdown(
+                "<div style='font-size:0.8rem;font-weight:600;text-transform:uppercase;"
+                "letter-spacing:0.05em;margin-bottom:0.35rem;'>Salles à afficher</div>",
+                unsafe_allow_html=True,
+            )
+            cols = st.columns(3)
+            selected = []
+            for i, s in enumerate(SALLES_ORDER_DISPLAY):
+                with cols[i]:
+                    if st.checkbox(s, value=True, key=f"gs_show_{i}"):
+                        selected.append(s)
 
-    col1, col2, col3 = st.columns([2, 2, 1])
-    with col1:
-        salle = st.selectbox(
-            "SALLE",
-            options=["Salle principale", "Salle du fond", "Salle du milieu"],
-            index=["Salle principale", "Salle du fond", "Salle du milieu"].index(default_salle),
-            key="gs_salle"
-        )
-    with col2:
-        date_input = st.date_input(
-            "DATE",
-            value=default_date,
-            min_value=date(2020, 1, 1),
-            max_value=date(2030, 12, 31),
-            key="gs_date"
-        )
-    with col3:
-        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-        sans_heure = st.toggle("Journée complète", value=True, key="gs_sans_heure")
+    st.session_state.global_date = d
 
-    heure = None
-    if not sans_heure:
-        heure = st.time_input(
-            "HEURE",
-            value=datetime.now().time().replace(minute=0, second=0, microsecond=0),
-            key="gs_heure"
-        )
+    if not selected:
+        st.info("Sélectionnez au moins une salle à afficher.")
+        return
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='margin:0.5rem 0 1rem;color:#94a3b8;font-size:0.9rem;'>"
+        f"Disponibilités du <strong>{format_date_fr(d)}</strong></div>",
+        unsafe_allow_html=True,
+    )
 
-    verify_clicked = st.button("Analyser la disponibilité", use_container_width=True, type="primary", key="gs_verify")
-
-    if verify_clicked or 'gs_occupations' in st.session_state:
-        if verify_clicked:
-            with st.spinner("Analyse en cours..."):
-                try:
-                    if sans_heure:
-                        result = checker.get_all_occupations(salle.lower(), date_input)
-                    else:
-                        result = checker.check_availability(salle.lower(), date_input, heure)
-
-                    st.session_state.gs_occupations = result.get("occupations", [])
-                    st.session_state.gs_is_libre = result.get("libre", False)
-                    st.session_state.gs_result_date = result.get("date", date_input)
-                    st.session_state.gs_result_heure = result.get("heure", heure)
-                    st.session_state.gs_res_salle = salle
-                    st.session_state.gs_res_date_input = date_input
-                    st.session_state.gs_overlaps = result.get("overlaps", [])
-                    st.session_state.gs_unprecise = result.get("unprecise", [])
-
-                    if "error" in result:
-                        st.toast("Connexion Google Sheets impossible — réservations non affichées", icon="⚠️")
-                except Exception as e:
-                    st.error(f"Erreur lors de la vérification : {str(e)}")
-                    st.session_state.gs_occupations = []
-
-        if 'gs_occupations' in st.session_state:
-            occupations = st.session_state.gs_occupations
-            is_libre = st.session_state.get("gs_is_libre", False)
-            result_date = st.session_state.get("gs_result_date", date_input)
-            result_heure = st.session_state.get("gs_result_heure", heure)
-            current_salle = st.session_state.get("gs_res_salle", salle)
-            overlaps = st.session_state.get("gs_overlaps", [])
-            unprecise = st.session_state.get("gs_unprecise", [])
-
-            # Avertissement en cas de chevauchement
-            if overlaps:
-                with st.container():
-                    st.warning("⚠️ **Conflits d'horaire détectés**")
-                    for overlap in overlaps:
-                        first = overlap["first"]
-                        second = overlap["second"]
-                        st.markdown(
-                            f"• **{first['occupant']}** ({first['horaire']}) chevauche "
-                            f"**{second['occupant']}** ({second['horaire']})",
-                            unsafe_allow_html=True
-                        )
-
-            # Avertissement si des horaires ne sont pas precises
-            if unprecise:
-                with st.container():
-                    st.warning("⚠️ **Horaires non précisés** — le statut libre/occupé peut être incorrect")
-                    for u in unprecise:
-                        st.markdown(
-                            f"• **{u['occupant']}** : {u['horaire']}",
-                            unsafe_allow_html=True
-                        )
-
-            kpi1, kpi2, kpi3 = st.columns(3)
-
-            with kpi1:
-                if not occupations:
-                    status_class = "success"
-                    status_text = "LIBRE"
-                    status_sub = "Aucune occupation"
-                elif is_libre:
-                    status_class = "success"
-                    status_text = "LIBRE"
-                    status_sub = f"{len(occupations)} occupation(s) hors créneau"
-                else:
-                    status_class = "danger"
-                    status_text = "OCCUPÉE"
-                    status_sub = f"{len(occupations)} conflit(s)"
-
-                st.markdown(f"""
-                <div class="kpi-card {status_class} animate-in">
-                    <div class="kpi-label">Statut</div>
-                    <div class="kpi-value">{status_text}</div>
-                    <div class="kpi-sub">{status_sub}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with kpi2:
-                next_occ = "—"
-                next_time = ""
-                if occupations and not is_libre:
-                    next_occ = occupations[0].get('occupant', 'Occupé')
-                    next_time = occupations[0].get('horaire', '')
-                elif occupations:
-                    next_occ = f"{len(occupations)} résa."
-
-                st.markdown(f"""
-                <div class="kpi-card info animate-in">
-                    <div class="kpi-label">Prochaine occupation</div>
-                    <div class="kpi-value" style="font-size: 1.4rem;">{next_occ}</div>
-                    <div class="kpi-sub">{next_time}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with kpi3:
-                total_revenus = 0
-                for occ in occupations:
-                    prix_str = str(occ.get('prix_location', '')).replace('€', '').replace(' ', '')
-                    try:
-                        if prix_str:
-                            total_revenus += float(prix_str)
-                    except ValueError:
-                        pass
-
-                revenus_text = f"{total_revenus:.0f} €" if total_revenus > 0 else "—"
-
-                st.markdown(f"""
-                <div class="kpi-card warning animate-in">
-                    <div class="kpi-label">Revenus jour</div>
-                    <div class="kpi-value">{revenus_text}</div>
-                    <div class="kpi-sub">Prix location total</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Timeline
-            st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
-            st.markdown("### Timeline des occupations")
-            st.markdown(render_timeline(occupations), unsafe_allow_html=True)
-
-            # Détails
-            if occupations:
-                st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
-                st.markdown("### Détails des occupations")
-                for occ in occupations:
-                    st.markdown(render_detail_card(occ), unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div style="text-align: center; padding: 3rem 1rem;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-                    <div style="font-size: 1.1rem; font-weight: 600;">La salle est entièrement libre</div>
-                    <div style="font-size: 0.9rem; margin-top: 0.5rem; color: #94a3b8;">Aucune occupation prévue pour cette journée</div>
-                </div>
-                """, unsafe_allow_html=True)
+    # Affichage dans l'ordre hiérarchique : principale → fond → milieu
+    for s in SALLES_ORDER_DISPLAY:
+        if s in selected:
+            render_salle_section(checker, s, d)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -990,29 +966,26 @@ def onglet_editer_planning(checker):
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<div class='form-section'>", unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns([2, 2, 1])
-    with c1:
-        ep_salle = st.selectbox(
-            "SALLE",
-            options=["Salle principale", "Salle du fond", "Salle du milieu"],
-            index=["Salle principale", "Salle du fond", "Salle du milieu"].index(default_salle),
-            key="ep_salle"
-        )
-    with c2:
-        ep_date = st.date_input(
-            "DATE",
-            value=default_date,
-            min_value=date(2020, 1, 1),
-            max_value=date(2030, 12, 31),
-            key="ep_date"
-        )
-    with c3:
-        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-        search_clicked = st.button("Rechercher", use_container_width=True, type="primary", key="ep_search")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        c1, c2, c3 = st.columns([2, 2, 1])
+        with c1:
+            ep_salle = st.selectbox(
+                "SALLE",
+                options=["Salle principale", "Salle du fond", "Salle du milieu"],
+                index=["Salle principale", "Salle du fond", "Salle du milieu"].index(default_salle),
+                key="ep_salle"
+            )
+        with c2:
+            ep_date = st.date_input(
+                "DATE",
+                value=default_date,
+                min_value=date(2020, 1, 1),
+                max_value=date(2030, 12, 31),
+                key="ep_date"
+            )
+        with c3:
+            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+            search_clicked = st.button("Rechercher", use_container_width=True, type="primary", key="ep_search")
 
     needs_search = st.session_state.get("ep_needs_search", False)
     if search_clicked or 'ep_occupations' in st.session_state or needs_search:
@@ -1337,15 +1310,11 @@ def onglet_notifications(checker):
                 st.error("Notifications désactivées.")
             else:
                 with st.spinner("Envoi en cours..."):
-                    success, error = notifications.envoyer_recap_quotidien(checker)
+                    success, info = notifications.envoyer_recap_quotidien(checker)
                     if success:
-                        dests = preferences.get_subscribed_emails(checker)
-                        if dests:
-                            st.success(f"✅ Récap envoyé à {len(dests)} destinataire(s) : {', '.join(dests)}")
-                        else:
-                            st.warning("✅ Récap envoyé (aucun destinataire abonné).")
+                        st.success(f"✅ {info}")
                     else:
-                        st.error(f"❌ {error}")
+                        st.error(f"❌ {info}")
     with col2:
         if st.button("🔔 Envoyer un email de test", use_container_width=True):
             if not active:
@@ -1580,6 +1549,47 @@ def render_settings_dialog(checker, authenticator):
                 st.success("✅ Vous êtes maintenant abonné aux notifications.")
                 st.rerun()
 
+        # ── Préférences fines (jours + salles) ──
+        if subscribed:
+            st.markdown("<div style='margin: 1rem 0 0.5rem;'></div>", unsafe_allow_html=True)
+            st.markdown("**Mes préférences de notification**")
+            st.caption("Le récap est envoyé la veille pour le lendemain, uniquement si une salle suivie est occupée.")
+
+            jours_labels = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+            salles_labels = {
+                "salle principale": "Salle principale",
+                "salle du fond": "Salle du fond",
+                "salle du milieu": "Salle du milieu",
+            }
+
+            cur_jours = preferences.get_notif_jours(current_user)
+            cur_salles = preferences.get_notif_salles(current_user)
+
+            with st.form(key="settings_notif_prefs_form", border=False):
+                sel_jours_labels = st.multiselect(
+                    "Jours concernés (jour du récap)",
+                    options=jours_labels,
+                    default=[jours_labels[j] for j in cur_jours],
+                    help="Décochez un jour pour ne pas recevoir le récap le concernant (ex. le dimanche).",
+                )
+                st.markdown("<div style='font-size:0.8rem;font-weight:600;margin:0.4rem 0 0.2rem;'>Salles suivies</div>", unsafe_allow_html=True)
+                sel_salles = []
+                cols = st.columns(3)
+                for i, (skey, slabel) in enumerate(salles_labels.items()):
+                    with cols[i]:
+                        if st.checkbox(slabel, value=(skey in cur_salles), key=f"notif_salle_{skey}"):
+                            sel_salles.append(skey)
+
+                prefs_submitted = st.form_submit_button("💾 Enregistrer mes préférences", use_container_width=True)
+                if prefs_submitted:
+                    sel_jours = [jours_labels.index(l) for l in sel_jours_labels]
+                    preferences.set_notif_jours(current_user, sel_jours)
+                    preferences.set_notif_salles(current_user, sel_salles)
+                    if not sel_jours or not sel_salles:
+                        st.warning("⚠️ Préférences enregistrées, mais aucun récap ne sera envoyé (aucun jour ou aucune salle sélectionné).")
+                    else:
+                        st.success("✅ Préférences enregistrées.")
+
         # Test d'envoi (admin seulement)
         if is_admin:
             st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
@@ -1590,11 +1600,11 @@ def render_settings_dialog(checker, authenticator):
                     st.error("Notifications désactivées (SMTP non configuré).")
                 else:
                     with st.spinner("Envoi..."):
-                        success, error = notif_mod.envoyer_recap_quotidien(checker)
+                        success, info = notif_mod.envoyer_recap_quotidien(checker)
                         if success:
-                            st.success("✅ Récap envoyé !")
+                            st.success(f"✅ {info}")
                         else:
-                            st.error(f"❌ {error}")
+                            st.error(f"❌ {info}")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1716,10 +1726,159 @@ def render_settings_dialog(checker, authenticator):
 
 
 # ═══════════════════════════════════════════════════════════
+# FLUX MOT DE PASSE OUBLIÉ (code de vérification par email)
+# ═══════════════════════════════════════════════════════════
+RESET_CODE_TTL = 600  # secondes (10 minutes)
+
+
+def _clear_reset_state():
+    """Nettoie l'état du flux de réinitialisation."""
+    for k in ("reset_step", "reset_code", "reset_code_exp",
+              "reset_target_user", "reset_target_email", "reset_target_name"):
+        st.session_state.pop(k, None)
+
+
+def _finaliser_connexion(authenticator, username, name):
+    """Connecte directement l'utilisateur après réinitialisation du mot de passe."""
+    st.session_state["authentication_status"] = True
+    st.session_state["username"] = username
+    st.session_state["name"] = name
+    # Poser le cookie de re-authentification si possible (persistance)
+    try:
+        authenticator.cookie_controller.set_cookie()
+    except Exception:
+        pass
+
+
+def render_password_reset_flow(checker, authenticator):
+    """
+    Réinitialisation « à la Google » :
+      1. l'utilisateur saisit son email ;
+      2. il reçoit un code de vérification ;
+      3. il saisit le code + un nouveau mot de passe ;
+      4. il est connecté directement à l'application.
+    """
+    import notifications
+
+    st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Mot de passe oublié</h4>", unsafe_allow_html=True)
+
+    if not notifications.notifications_active():
+        st.warning("⚠️ Le service d'email n'est pas configuré. Impossible d'envoyer un code de vérification pour le moment — contactez l'administrateur.")
+        return
+
+    step = st.session_state.get("reset_step", "request")
+
+    # ── Étape 1 : demande du code ──
+    if step == "request":
+        st.caption("Saisissez l'email associé à votre compte. Vous recevrez un code de vérification.")
+        with st.form(key="reset_request_form", border=False):
+            email = st.text_input("Email du compte", placeholder="ex: jean.dupont@gmail.com", key="reset_email_input")
+            submitted = st.form_submit_button("Envoyer le code", type="primary", use_container_width=True)
+
+            if submitted:
+                email = (email or "").strip()
+                if not email or "@" not in email:
+                    st.error("Veuillez saisir une adresse email valide.")
+                else:
+                    username, data = checker.get_user_by_email(email)
+                    env_user = os.environ.get("AUTH_USER", "")
+                    if username and username == env_user:
+                        st.error("❌ Ce compte doit être réinitialisé par l'administrateur.")
+                    elif not username:
+                        st.error("❌ Aucun compte n'est associé à cet email.")
+                    else:
+                        code = f"{secrets.randbelow(1000000):06d}"
+                        ok, err = notifications.envoyer_code_verification(
+                            email, code, data.get("name", username)
+                        )
+                        if ok:
+                            st.session_state.reset_step = "verify"
+                            st.session_state.reset_code = code
+                            st.session_state.reset_code_exp = time_module.time() + RESET_CODE_TTL
+                            st.session_state.reset_target_user = username
+                            st.session_state.reset_target_email = email
+                            st.session_state.reset_target_name = data.get("name", username)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Envoi impossible : {err}")
+
+    # ── Étape 2 : vérification du code + nouveau mot de passe ──
+    else:
+        email = st.session_state.get("reset_target_email", "")
+        st.caption(f"Un code à 6 chiffres a été envoyé à **{email}**. Il est valable 10 minutes.")
+
+        with st.form(key="reset_verify_form", border=False):
+            code_input = st.text_input("Code de vérification", placeholder="6 chiffres", max_chars=6, key="reset_code_input")
+            c1, c2 = st.columns(2)
+            with c1:
+                new_pwd = st.text_input("Nouveau mot de passe", type="password", key="reset_new_pwd")
+            with c2:
+                new_pwd_confirm = st.text_input("Confirmer", type="password", key="reset_new_pwd_confirm")
+
+            submitted = st.form_submit_button("Réinitialiser et se connecter", type="primary", use_container_width=True)
+
+            if submitted:
+                expected = st.session_state.get("reset_code")
+                exp = st.session_state.get("reset_code_exp", 0)
+                username = st.session_state.get("reset_target_user")
+                name = st.session_state.get("reset_target_name", username)
+
+                if not expected or time_module.time() > exp:
+                    st.error("⏱️ Le code a expiré. Recommencez la procédure.")
+                elif (code_input or "").strip() != expected:
+                    st.error("❌ Code incorrect.")
+                elif not new_pwd:
+                    st.error("Veuillez saisir un nouveau mot de passe.")
+                elif new_pwd != new_pwd_confirm:
+                    st.error("Les mots de passe ne correspondent pas.")
+                elif len(new_pwd) < 4:
+                    st.error("Le mot de passe doit faire au moins 4 caractères.")
+                else:
+                    h = stauth.Hasher()
+                    new_hash = h.hash(new_pwd)
+                    success, info = checker.update_user_password_google(username, new_hash)
+                    if success:
+                        _clear_reset_state()
+                        st.session_state.login_mode = "login"
+                        _finaliser_connexion(authenticator, username, name)
+                        st.success("✅ Mot de passe modifié. Connexion en cours…")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {info}")
+
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            if st.button("↻ Renvoyer un code", key="reset_resend", use_container_width=True):
+                code = f"{secrets.randbelow(1000000):06d}"
+                ok, err = notifications.envoyer_code_verification(
+                    email, code, st.session_state.get("reset_target_name", "")
+                )
+                if ok:
+                    st.session_state.reset_code = code
+                    st.session_state.reset_code_exp = time_module.time() + RESET_CODE_TTL
+                    st.success("Nouveau code envoyé.")
+                else:
+                    st.error(f"❌ {err}")
+        with cc2:
+            if st.button("Changer d'email", key="reset_change_email", use_container_width=True):
+                _clear_reset_state()
+                st.rerun()
+
+
+# ═══════════════════════════════════════════════════════════
 # ÉCRAN DE LOGIN (non authentifié)
 # ═══════════════════════════════════════════════════════════
 def render_login_screen(checker, authenticator):
     """Affiche l'écran de login centré et épuré."""
+
+    # Aucune barre latérale sur l'écran de connexion
+    st.markdown("""
+    <style>
+        section[data-testid="stSidebar"],
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="collapsedControl"] { display: none !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
     if "login_mode" not in st.session_state:
         st.session_state.login_mode = "login"
@@ -1730,117 +1889,81 @@ def render_login_screen(checker, authenticator):
 
     with center:
         # Header
-        st.markdown("""
-        <div style="text-align: center; padding: 2rem 0 1.5rem;">
-            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏢</div>
+        st.markdown(f"""
+        <div style="text-align: center; padding: 2.5rem 0 1.5rem;">
+            <div style="font-size: 3rem; line-height: 1; margin-bottom: 0.5rem;">🕊️</div>
             <h2 style="font-size: 1.6rem; margin: 0; font-weight: 800; letter-spacing: -0.02em;">CFPDC</h2>
             <p style="color: #94a3b8; margin-top: 0.35rem; font-size: 0.9rem;">Gestion des Salles</p>
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<div class='auth-card'>", unsafe_allow_html=True)
+        with st.container(border=True):
+            if mode == "login":
+                authenticator.login(location='main', fields={
+                    'Form name': 'Se connecter',
+                    'Username': "Nom d'utilisateur",
+                    'Password': 'Mot de passe',
+                    'Login': 'Se connecter',
+                })
 
-        if mode == "login":
-            st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Se connecter</h4>", unsafe_allow_html=True)
-            authenticator.login(location='main')
+                st.markdown("<div class='auth-divider'>ou</div>", unsafe_allow_html=True)
 
-            st.markdown("<div class='auth-divider'>ou</div>", unsafe_allow_html=True)
-
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("✨ Créer un compte", use_container_width=True, key="btn_to_register"):
-                    st.session_state.login_mode = "register"
-                    st.rerun()
-            with c2:
-                if st.button("🔑 Mot de passe oublié", use_container_width=True, key="btn_to_reset"):
-                    st.session_state.login_mode = "reset"
-                    st.rerun()
-
-        elif mode == "register":
-            st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Créer un compte</h4>", unsafe_allow_html=True)
-
-            with st.form(key="login_register_form", border=False):
-                r1, r2 = st.columns(2)
-                with r1:
-                    reg_username = st.text_input("Username", placeholder="ex: pastor", key="reg_username")
-                    reg_pwd = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères", key="reg_pwd")
-                with r2:
-                    reg_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean", key="reg_name")
-                    reg_pwd_confirm = st.text_input("Confirmer", type="password", placeholder="Répéter", key="reg_pwd_confirm")
-
-                reg_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
-
-                if reg_submitted:
-                    if not reg_username or not reg_pwd:
-                        st.error("Le username et le mot de passe sont obligatoires.")
-                    elif reg_pwd != reg_pwd_confirm:
-                        st.error("Les mots de passe ne correspondent pas.")
-                    elif len(reg_pwd) < 4:
-                        st.error("Le mot de passe doit faire au moins 4 caractères.")
-                    else:
-                        h = stauth.Hasher()
-                        pwd_hash = h.hash(reg_pwd)
-                        success, info = checker.add_user_google(
-                            reg_username.strip(),
-                            reg_name.strip() or reg_username.strip(),
-                            pwd_hash,
-                            created_by="inscription"
-                        )
-                        if success:
-                            st.success(f"✅ {info}. Vous pouvez maintenant vous connecter.")
-                        else:
-                            st.error(f"❌ {info}")
-
-            if st.button("← Retour à la connexion", key="btn_back_login_from_reg", use_container_width=True):
-                st.session_state.login_mode = "login"
-                st.rerun()
-
-        elif mode == "reset":
-            st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Mot de passe oublié</h4>", unsafe_allow_html=True)
-
-            with st.form(key="login_reset_pwd_form", border=False):
                 c1, c2 = st.columns(2)
                 with c1:
-                    reset_user = st.text_input("Username", placeholder="ex: narcisse", key="reset_user")
-                    reset_old = st.text_input("Ancien mot de passe", type="password", key="reset_old")
+                    if st.button("Créer un compte", use_container_width=True, key="btn_to_register"):
+                        st.session_state.login_mode = "register"
+                        st.rerun()
                 with c2:
-                    reset_new = st.text_input("Nouveau mot de passe", type="password", key="reset_new")
-                    reset_new_confirm = st.text_input("Confirmer", type="password", key="reset_new_confirm")
+                    if st.button("Mot de passe oublié", use_container_width=True, key="btn_to_reset"):
+                        st.session_state.login_mode = "reset"
+                        st.rerun()
 
-                reset_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
+            elif mode == "register":
+                st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Créer un compte</h4>", unsafe_allow_html=True)
 
-                if reset_submitted:
-                    if not reset_user or not reset_old or not reset_new:
-                        st.error("Tous les champs sont obligatoires.")
-                    elif reset_new != reset_new_confirm:
-                        st.error("Les nouveaux mots de passe ne correspondent pas.")
-                    elif len(reset_new) < 4:
-                        st.error("Le mot de passe doit faire au moins 4 caractères.")
-                    else:
-                        all_users = checker.get_users_google()
-                        env_user = os.environ.get("AUTH_USER", "")
+                with st.form(key="login_register_form", border=False):
+                    r1, r2 = st.columns(2)
+                    with r1:
+                        reg_username = st.text_input("Nom d'utilisateur", placeholder="ex: pastor", key="reg_username")
+                        reg_pwd = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères", key="reg_pwd")
+                    with r2:
+                        reg_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean", key="reg_name")
+                        reg_pwd_confirm = st.text_input("Confirmer", type="password", placeholder="Répéter", key="reg_pwd_confirm")
 
-                        if reset_user.strip() == env_user:
-                            st.error("❌ Impossible de modifier le compte administrateur ici.")
-                        elif reset_user.strip() not in all_users:
-                            st.error(f"❌ Utilisateur '{reset_user}' non trouvé.")
+                    reg_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
+
+                    if reg_submitted:
+                        if not reg_username or not reg_pwd:
+                            st.error("Le nom d'utilisateur et le mot de passe sont obligatoires.")
+                        elif reg_pwd != reg_pwd_confirm:
+                            st.error("Les mots de passe ne correspondent pas.")
+                        elif len(reg_pwd) < 4:
+                            st.error("Le mot de passe doit faire au moins 4 caractères.")
                         else:
                             h = stauth.Hasher()
-                            if not h.check_pw(reset_old, all_users[reset_user.strip()]["password"]):
-                                st.error("❌ Ancien mot de passe incorrect.")
+                            pwd_hash = h.hash(reg_pwd)
+                            success, info = checker.add_user_google(
+                                reg_username.strip(),
+                                reg_name.strip() or reg_username.strip(),
+                                pwd_hash,
+                                created_by="inscription"
+                            )
+                            if success:
+                                st.success(f"✅ {info}. Vous pouvez maintenant vous connecter.")
                             else:
-                                new_hash = h.hash(reset_new)
-                                success, info = checker.update_user_password_google(reset_user.strip(), new_hash)
-                                if success:
-                                    st.success(f"✅ {info}. Vous pouvez vous connecter.")
-                                else:
-                                    st.error(f"❌ {info}")
+                                st.error(f"❌ {info}")
 
-            if st.button("← Retour à la connexion", key="btn_back_login_from_rst", use_container_width=True):
-                st.session_state.login_mode = "login"
-                st.rerun()
+                if st.button("← Retour à la connexion", key="btn_back_login_from_reg", use_container_width=True):
+                    st.session_state.login_mode = "login"
+                    st.rerun()
 
-        st.markdown("</div>", unsafe_allow_html=True)
+            elif mode == "reset":
+                render_password_reset_flow(checker, authenticator)
+
+                if st.button("← Retour à la connexion", key="btn_back_login_from_rst", use_container_width=True):
+                    _clear_reset_state()
+                    st.session_state.login_mode = "login"
+                    st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1937,9 +2060,9 @@ def main():
 
         # Onglets principaux (Utilisateurs et Notifications sont dans le rouage ⚙️)
         if is_admin:
-            tab1, tab2, tab3 = st.tabs(["Gestion de Salle", "Planning & Réservations", "Notifications"])
+            tab1, tab2, tab3 = st.tabs(["Disponibilités", "Réservations", "Notifications"])
         else:
-            tab1, tab2 = st.tabs(["Gestion de Salle", "Planning & Réservations"])
+            tab1, tab2 = st.tabs(["Disponibilités", "Réservations"])
 
         with tab1:
             onglet_gestion_salle(checker)

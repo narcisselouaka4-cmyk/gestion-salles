@@ -1,0 +1,12 @@
+[theme]
+# Palette professionnelle sobre — accent bleu calme (identité "colombe" CFPDC).
+# On ne force ni le fond ni le texte : le thème clair ET sombre de Streamlit
+# restent utilisables, l'accent s'applique aux deux.
+primaryColor = "#2b5c9e"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[server]
+enableStaticServing = true

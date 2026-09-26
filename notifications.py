@@ -100,134 +100,221 @@ def _envoyer_email(destinataires: list, sujet: str, corps_html: str) -> tuple:
 # ═══════════════════════════════════════════════════════════
 # (a) NOTIFICATION QUOTIDIENNE — récap du lendemain
 # ═══════════════════════════════════════════════════════════
-def _ligne_occupation_html(occ: dict) -> str:
-    """Génère une ligne HTML pour une occupation."""
+NOMS_SALLES = {
+    "salle principale": "Salle principale",
+    "salle du fond": "Salle du fond",
+    "salle du milieu": "Salle du milieu",
+}
+SALLES_ORDER = ["salle principale", "salle du fond", "salle du milieu"]
+
+
+def _tri_occs(occs: list) -> list:
+    """Trie les occupations par heure de début."""
+    def _key(o):
+        d = o.get("debut")
+        return d.strftime("%H%M") if hasattr(d, "strftime") else str(o.get("horaire", ""))
+    return sorted(occs, key=_key)
+
+
+def _recap_row(occ: dict) -> str:
+    """Ligne détaillée : nom, activité, horaire."""
     occupant = occ.get("occupant", "Inconnu")
-    activite = occ.get("activite", "")
+    activite = occ.get("activite", "") or "—"
     horaire = occ.get("horaire", "—")
-    salle = occ.get("salle", "")
-    telephone = occ.get("telephone", "")
-    source = occ.get("source", "")
-
-    # Badge source (planning fixe vs réservation)
-    if source == "planning fixe":
-        badge = '<span class="badge fixe">Fixe</span>'
-    else:
-        badge = '<span class="badge resa">Résa</span>'
-
-    tel_html = f" — 📞 {telephone}" if telephone else ""
-    salle_html = f"<div class='salle'>{salle}</div>" if salle else ""
-
     return f"""
     <tr>
-      <td><strong>{occupant}</strong>{tel_html}</td>
+      <td><strong>{occupant}</strong></td>
       <td>{activite}</td>
-      <td><strong>{horaire}</strong></td>
-      <td>{badge}</td>
+      <td class="hr"><strong>{horaire}</strong></td>
     </tr>"""
 
 
-def _html_quotidien(demain: date, occupations_par_salle: dict) -> str:
-    """Construit le HTML du récap quotidien."""
-    titre_date = format_date_fr(demain)
-    sections = []
-    salles_order = ["salle principale", "salle du fond", "salle du milieu"]
-    noms_salles = {
-        "salle principale": "Salle principale",
-        "salle du fond": "Salle du fond",
-        "salle du milieu": "Salle du milieu",
-    }
+def _html_recap(date_cible: date, occ_par_salle: dict) -> str:
+    """
+    Construit le récap : un résumé groupé (salles occupées) puis un bloc
+    de détails repliable par salle (nom / activité / horaire).
+    `occ_par_salle` ne contient que les salles suivies ET occupées.
+    """
+    titre_date = format_date_fr(date_cible)
 
-    for salle in salles_order:
-        occs = occupations_par_salle.get(salle, [])
-        # Trier par heure de début
-        def _key(o):
-            d = o.get("debut")
-            return d.strftime("%H%M") if hasattr(d, "strftime") else "0000"
-        occs_sorted = sorted(occs, key=_key)
+    # Résumé groupé
+    resume_items = []
+    for salle in SALLES_ORDER:
+        occs = occ_par_salle.get(salle)
+        if not occs:
+            continue
+        n = len(occs)
+        libelle = "occupation" if n == 1 else "occupations"
+        resume_items.append(
+            f'<li><span class="dot"></span><strong>{NOMS_SALLES[salle]}</strong>'
+            f'<span class="count">{n} {libelle}</span></li>'
+        )
+    resume_html = f'<ul class="resume">{"".join(resume_items)}</ul>'
 
-        lignes = "".join(_ligne_occupation_html(o) for o in occs_sorted)
-        if not lignes:
-            lignes = '<tr><td colspan="4" class="vide">Aucune occupation prévue</td></tr>'
-
-        sections.append(f"""
-        <div class="salle-section">
-          <h2>{noms_salles[salle]}</h2>
+    # Détails repliables par salle
+    details_sections = []
+    for salle in SALLES_ORDER:
+        occs = occ_par_salle.get(salle)
+        if not occs:
+            continue
+        lignes = "".join(_recap_row(o) for o in _tri_occs(occs))
+        details_sections.append(f"""
+        <details open>
+          <summary>{NOMS_SALLES[salle]} — en savoir plus</summary>
           <table>
-            <thead>
-              <tr><th>Occupant</th><th>Activité</th><th>Horaire</th><th>Type</th></tr>
-            </thead>
+            <thead><tr><th>Nom</th><th>Activité</th><th class="hr">Horaire</th></tr></thead>
             <tbody>{lignes}</tbody>
           </table>
-        </div>""")
+        </details>""")
 
     return f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-  body {{ font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #1e293b; background: #f8fafc; padding: 1.5rem; }}
-  h1 {{ font-size: 1.4rem; color: #4f46e5; margin-bottom: 0.25rem; }}
-  .date {{ color: #64748b; font-size: 0.95rem; margin-bottom: 1.5rem; }}
-  .salle-section {{ background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }}
-  .salle-section h2 {{ font-size: 1.1rem; margin: 0 0 0.75rem; color: #0f172a; border-bottom: 2px solid #4f46e5; padding-bottom: 0.4rem; display: inline-block; }}
+  body {{ font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #1e293b; background: #f5f6f8; padding: 1.5rem; margin: 0; }}
+  .wrap {{ max-width: 560px; margin: 0 auto; }}
+  h1 {{ font-size: 1.25rem; color: #0f172a; margin: 0 0 0.15rem; }}
+  .date {{ color: #64748b; font-size: 0.95rem; margin-bottom: 1.25rem; }}
+  .resume {{ list-style: none; padding: 0; margin: 0 0 1.25rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }}
+  .resume li {{ display: flex; align-items: center; gap: 0.6rem; padding: 0.85rem 1.1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; }}
+  .resume li:last-child {{ border-bottom: none; }}
+  .resume .dot {{ width: 9px; height: 9px; border-radius: 50%; background: #d97706; flex: none; }}
+  .resume .count {{ margin-left: auto; color: #64748b; font-size: 0.85rem; }}
+  details {{ background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.5rem 1.1rem; margin-bottom: 0.85rem; }}
+  summary {{ cursor: pointer; font-weight: 600; color: #0f172a; padding: 0.5rem 0; font-size: 0.98rem; }}
   table {{ width: 100%; border-collapse: collapse; }}
-  th {{ text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e2e8f0; }}
+  th {{ text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e2e8f0; }}
   td {{ padding: 0.55rem 0.5rem; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: top; }}
-  .vide {{ color: #94a3b8; font-style: italic; text-align: center; }}
-  .badge {{ display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }}
-  .badge.fixe {{ background: #e0e7ff; color: #4338ca; }}
-  .badge.resa {{ background: #fef3c7; color: #92400e; }}
-  .footer {{ margin-top: 2rem; color: #94a3b8; font-size: 0.8rem; text-align: center; }}
+  tr:last-child td {{ border-bottom: none; }}
+  .hr {{ white-space: nowrap; text-align: right; }}
+  th.hr {{ text-align: right; }}
+  .footer {{ margin-top: 1.5rem; color: #94a3b8; font-size: 0.78rem; text-align: center; }}
 </style>
 </head>
 <body>
-  <h1>📅 Récapitulatif des occupations</h1>
-  <div class="date">Demain — {titre_date}</div>
-  {''.join(sections)}
-  <div class="footer">Email automatique — Application Gestion des Salles CFPDC</div>
+  <div class="wrap">
+    <h1>Salles occupées demain</h1>
+    <div class="date">{titre_date}</div>
+    {resume_html}
+    {''.join(details_sections)}
+    <div class="footer">Email automatique — Gestion des Salles CFPDC</div>
+  </div>
 </body>
 </html>"""
 
 
-def envoyer_recap_quotidien(checker, date_cible: date = None) -> tuple:
-    """
-    Envoie le récap des occupations de la date cible (defaut: demain).
-    Retourne (success, error).
-    """
-    if not notifications_active():
-        return False, "Notifications désactivées (SMTP non configuré)"
-
-    if date_cible is None:
-        date_cible = date.today() + timedelta(days=1)
-
-    salles = ["salle principale", "salle du fond", "salle du milieu"]
+def _occupations_du_jour(checker, date_cible: date) -> dict:
+    """Récupère les occupations de toutes les salles pour une date."""
     occupations_par_salle = {}
-    for salle in salles:
+    for salle in SALLES_ORDER:
         try:
             result = checker.get_all_occupations(salle, date_cible)
             occs = result.get("occupations", [])
-            # Enrichir avec le nom de salle
             for o in occs:
                 o["salle"] = salle
             occupations_par_salle[salle] = occs
         except Exception as e:
             print(f"[Notifications] Erreur récup occupations {salle}: {e}")
             occupations_par_salle[salle] = []
+    return occupations_par_salle
 
-    # S'il n'y a aucune occupation nulle part, on envoie quand même
-    # un email indiquant que toutes les salles sont libres
-    total = sum(len(v) for v in occupations_par_salle.values())
-    if total == 0:
-        print(f"[Notifications] Aucune occupation pour le {date_cible}, email 'salles libres' envoyé")
 
-    destinataires = preferences.get_subscribed_emails(checker)
-    if not destinataires:
-        return False, "Aucun destinataire avec email valide"
+def envoyer_recap_quotidien(checker, date_cible: date = None) -> tuple:
+    """
+    Envoie, la veille pour le lendemain, un récap PERSONNALISÉ à chaque
+    destinataire abonné selon ses préférences :
+      - jours actifs (le récap n'est envoyé que si le jour cible est suivi) ;
+      - salles suivies (filtrage du contenu) ;
+      - aucun email si aucune des salles suivies n'est occupée.
 
-    sujet = f"📅 Récap des salles — {format_date_fr(date_cible)}"
-    html = _html_quotidien(date_cible, occupations_par_salle)
-    return _envoyer_email(destinataires, sujet, html)
+    Retourne (success, info).
+    """
+    if not notifications_active():
+        return False, "Notifications désactivées (SMTP non configuré)"
+
+    if date_cible is None:
+        date_cible = date.today() + timedelta(days=1)
+    weekday = date_cible.weekday()
+
+    recipients = preferences.get_recipients(checker)
+    if not recipients:
+        return False, "Aucun destinataire abonné avec email valide"
+
+    occupations_par_salle = _occupations_du_jour(checker, date_cible)
+    sujet = f"Salles occupées — {format_date_fr(date_cible)}"
+
+    envoyes, ignores, erreurs = 0, 0, []
+    for r in recipients:
+        # Jour désactivé pour ce destinataire ?
+        if weekday not in r.get("jours", preferences.JOURS):
+            ignores += 1
+            continue
+
+        # Filtrer sur les salles suivies + occupées uniquement
+        salles_suivies = r.get("salles", preferences.SALLES)
+        occ_filtre = {
+            s: occupations_par_salle.get(s, [])
+            for s in salles_suivies
+            if occupations_par_salle.get(s)
+        }
+        if not occ_filtre:
+            ignores += 1  # aucune salle suivie occupée → pas d'email
+            continue
+
+        html = _html_recap(date_cible, occ_filtre)
+        success, error = _envoyer_email([r["email"]], sujet, html)
+        if success:
+            envoyes += 1
+        else:
+            erreurs.append(f"{r['email']}: {error}")
+
+    if erreurs:
+        return (envoyes > 0), f"{envoyes} envoyé(s), {ignores} ignoré(s). Erreurs: {'; '.join(erreurs)}"
+    if envoyes == 0:
+        return True, f"Aucun email à envoyer ({ignores} destinataire(s) ignoré(s) : aucune salle suivie occupée ou jour désactivé)"
+    return True, f"{envoyes} récap(s) envoyé(s), {ignores} ignoré(s)"
+
+
+# ═══════════════════════════════════════════════════════════
+# CODE DE VÉRIFICATION — réinitialisation du mot de passe
+# ═══════════════════════════════════════════════════════════
+def envoyer_code_verification(email: str, code: str, nom: str = "") -> tuple:
+    """
+    Envoie un code de vérification à un utilisateur qui a oublié son mot de
+    passe. Retourne (success, error).
+    """
+    if not notifications_active():
+        return False, "Service email indisponible (SMTP non configuré). Contactez l'administrateur."
+    if not email or "@" not in email:
+        return False, "Adresse email invalide"
+
+    salutation = f"Bonjour {nom}," if nom else "Bonjour,"
+    sujet = "Votre code de vérification — Gestion des Salles CFPDC"
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8">
+<style>
+  body {{ font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #1e293b; background: #f5f6f8; padding: 1.5rem; margin: 0; }}
+  .wrap {{ max-width: 460px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.75rem; }}
+  h1 {{ font-size: 1.15rem; color: #0f172a; margin: 0 0 1rem; }}
+  p {{ font-size: 0.95rem; line-height: 1.5; color: #334155; }}
+  .code {{ font-size: 2rem; font-weight: 800; letter-spacing: 0.3em; text-align: center; color: #0f172a; background: #f1f5f9; border-radius: 10px; padding: 1rem; margin: 1.25rem 0; }}
+  .note {{ font-size: 0.82rem; color: #64748b; }}
+  .footer {{ margin-top: 1.5rem; color: #94a3b8; font-size: 0.78rem; text-align: center; }}
+</style></head>
+<body>
+  <div class="wrap">
+    <h1>Réinitialisation du mot de passe</h1>
+    <p>{salutation}</p>
+    <p>Voici votre code de vérification. Saisissez-le dans l'application pour définir un nouveau mot de passe :</p>
+    <div class="code">{code}</div>
+    <p class="note">Ce code est valable 10 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — votre mot de passe reste inchangé.</p>
+  </div>
+  <div class="footer">Email automatique — Gestion des Salles CFPDC</div>
+</body>
+</html>"""
+    return _envoyer_email([email], sujet, html)
 
 
 # ═══════════════════════════════════════════════════════════

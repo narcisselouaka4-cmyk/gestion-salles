@@ -1434,6 +1434,20 @@ class SalleChecker:
         users = self.get_users_google()
         return (users.get(username, {}).get("email") or "").strip()
 
+    def get_user_by_email(self, email: str) -> tuple:
+        """
+        Retrouve un utilisateur à partir de son email (insensible à la casse).
+        Retourne (username, data) ou (None, None) si introuvable.
+        """
+        email = (email or "").strip().lower()
+        if not email:
+            return None, None
+        users = self.get_users_google()
+        for username, data in users.items():
+            if (data.get("email") or "").strip().lower() == email:
+                return username, data
+        return None, None
+
     def update_user_email_google(self, username: str, email: str) -> tuple:
         """
         Met à jour l'email d'un utilisateur dans l'onglet 'Utilisateurs' (colonne F).

@@ -11,6 +11,10 @@ PREFS_FILE = os.path.join(PREFS_DIR, "preferences.json")
 
 _lock = threading.Lock()
 
+# Salles gérées (clés canoniques) et jours de la semaine (0 = lundi … 6 = dimanche)
+SALLES = ["salle principale", "salle du fond", "salle du milieu"]
+JOURS = [0, 1, 2, 3, 4, 5, 6]
+
 
 def _load_all() -> dict:
     """Charge toutes les préférences depuis le fichier JSON."""
@@ -54,6 +58,39 @@ def is_subscribed(username: str) -> bool:
 def set_subscribed(username: str, subscribed: bool):
     """Active/désactive les notifications pour un utilisateur."""
     set_pref(username, "notifications", subscribed)
+
+
+def get_notif_jours(username: str) -> list:
+    """
+    Jours (0=lundi … 6=dimanche) pour lesquels l'utilisateur veut recevoir
+    le récap. Le jour concerné est le lendemain (date du récap).
+    Défaut : tous les jours.
+    """
+    val = get_pref(username, "notif_jours", None)
+    if not isinstance(val, list):
+        return list(JOURS)
+    return [j for j in val if j in JOURS]
+
+
+def set_notif_jours(username: str, jours: list):
+    """Définit les jours actifs pour les notifications."""
+    set_pref(username, "notif_jours", [j for j in jours if j in JOURS])
+
+
+def get_notif_salles(username: str) -> list:
+    """
+    Salles suivies par l'utilisateur pour les notifications.
+    Défaut : toutes les salles.
+    """
+    val = get_pref(username, "notif_salles", None)
+    if not isinstance(val, list):
+        return list(SALLES)
+    return [s for s in val if s in SALLES]
+
+
+def set_notif_salles(username: str, salles: list):
+    """Définit les salles suivies pour les notifications."""
+    set_pref(username, "notif_salles", [s for s in salles if s in SALLES])
 
 
 def get_user_email(username: str, checker=None) -> str:
@@ -107,3 +144,58 @@ def get_subscribed_emails(checker) -> list:
 
     # Dédupliquer
     return list(dict.fromkeys(emails))
+
+
+def get_recipients(checker) -> list:
+    """
+    Retourne la liste des destinataires abonnés avec leurs préférences fines.
+    Chaque entrée : {username, email, jours, salles}.
+
+    Combine les préférences locales et l'onglet 'Utilisateurs' du Google Sheet.
+    Les utilisateurs sans préférence locale reçoivent les valeurs par défaut
+    (tous les jours, toutes les salles).
+    """
+    recipients = []
+    seen_emails = set()
+    data = _load_all()
+
+    # 1. Utilisateurs avec préférences locales (abonnés uniquement)
+    for username, prefs in data.items():
+        if prefs.get("notifications", True) is not True:
+            continue
+        email = (prefs.get("email") or "").strip()
+        if not email or "@" not in email:
+            continue
+        if email in seen_emails:
+            continue
+        seen_emails.add(email)
+        recipients.append({
+            "username": username,
+            "email": email,
+            "jours": get_notif_jours(username),
+            "salles": get_notif_salles(username),
+        })
+
+    # 2. Utilisateurs du Google Sheet sans préférence locale (défauts)
+    if checker is not None:
+        try:
+            users = checker.get_users_google()
+            for username, udata in users.items():
+                if username in data:
+                    continue
+                email = (udata.get("email") or "").strip()
+                if not email or "@" not in email:
+                    continue
+                if email in seen_emails:
+                    continue
+                seen_emails.add(email)
+                recipients.append({
+                    "username": username,
+                    "email": email,
+                    "jours": list(JOURS),
+                    "salles": list(SALLES),
+                })
+        except Exception:
+            pass
+
+    return recipients
