@@ -422,6 +422,10 @@ st.markdown("""
         padding: 0.55rem 1.4rem;
         transition: background 0.15s ease, box-shadow 0.15s ease;
     }
+    div[data-testid="stButton"] > button[kind="primary"],
+    div[data-testid="stButton"] > button[kind="primary"] p {
+        color: #ffffff !important;
+    }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
         background: var(--accent-strong);
         border-color: var(--accent-strong);
@@ -431,6 +435,31 @@ st.markdown("""
         border-radius: var(--radius-sm);
         font-weight: 500;
     }
+
+    /* Bouton-icône discret de bascule de thème */
+    .st-key-theme_login button, .st-key-theme_sidebar button {
+        min-height: 0 !important;
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        border: 1px solid var(--hairline) !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+    .st-key-theme_login button:hover, .st-key-theme_sidebar button:hover {
+        background: var(--surface-2) !important;
+        border-color: var(--accent) !important;
+    }
+    .st-key-theme_login button [data-testid="stIconMaterial"] { font-size: 20px; }
+    .st-key-theme_sidebar button {
+        border-color: rgba(255,255,255,0.16) !important;
+        color: #cbd5e1 !important;
+    }
+    .st-key-theme_sidebar button [data-testid="stIconMaterial"] { font-size: 20px; color: #cbd5e1 !important; }
 
     /* Form override — évite l'effet « carte dans la carte » (login) */
     div[data-testid="stForm"] {
@@ -491,6 +520,83 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════
+# THÈME CLAIR / SOMBRE (bascule manuelle, déterministe)
+# ═══════════════════════════════════════════════════════════
+_THEME_DARK = """
+<style>
+    [data-testid="stAppViewContainer"] { background-color: #0e1117 !important; }
+    [data-testid="stHeader"] { background: transparent !important; }
+    [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3,
+    [data-testid="stMain"] h4, [data-testid="stMain"] h5, [data-testid="stMain"] p,
+    [data-testid="stMain"] span, [data-testid="stMain"] label, [data-testid="stMain"] li,
+    [data-testid="stMain"] .stMarkdown { color: #e6e9ef; }
+    [data-testid="stMain"] [data-testid="stCaptionContainer"] * { color: #9aa4b2 !important; }
+    [data-testid="stMain"] input, [data-testid="stMain"] textarea,
+    [data-testid="stMain"] [data-baseweb="input"], [data-testid="stMain"] [data-baseweb="base-input"],
+    [data-testid="stMain"] [data-baseweb="select"] > div, [data-testid="stMain"] [data-baseweb="textarea"] {
+        background-color: #1b2130 !important;
+        color: #e6e9ef !important;
+        border-color: rgba(255,255,255,0.14) !important;
+    }
+    [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] { border-color: rgba(255,255,255,0.10) !important; }
+    [data-testid="stMain"] div[data-testid="stButton"] > button[kind="secondary"],
+    [data-testid="stMain"] div[data-testid="stButton"] > button[kind="secondaryFormSubmit"],
+    [data-testid="stMain"] button[kind="secondaryFormSubmit"] {
+        background-color: #1b2130 !important;
+        color: #e6e9ef !important;
+        border-color: rgba(255,255,255,0.16) !important;
+    }
+    .kpi-card, .glass-card, .detail-card { background: rgba(255,255,255,0.04) !important; }
+</style>
+"""
+
+_THEME_LIGHT = """
+<style>
+    [data-testid="stAppViewContainer"] { background-color: #ffffff !important; }
+    [data-testid="stHeader"] { background: transparent !important; }
+    [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3,
+    [data-testid="stMain"] h4, [data-testid="stMain"] h5, [data-testid="stMain"] p,
+    [data-testid="stMain"] span, [data-testid="stMain"] label, [data-testid="stMain"] li,
+    [data-testid="stMain"] .stMarkdown { color: #1e293b; }
+    [data-testid="stMain"] [data-testid="stCaptionContainer"] * { color: #64748b !important; }
+    [data-testid="stMain"] input, [data-testid="stMain"] textarea,
+    [data-testid="stMain"] [data-baseweb="input"], [data-testid="stMain"] [data-baseweb="base-input"],
+    [data-testid="stMain"] [data-baseweb="select"] > div, [data-testid="stMain"] [data-baseweb="textarea"] {
+        background-color: #f8fafc !important;
+        color: #1e293b !important;
+        border-color: rgba(0,0,0,0.12) !important;
+    }
+    [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] { border-color: rgba(0,0,0,0.10) !important; }
+</style>
+"""
+
+
+def apply_theme():
+    """Applique le thème choisi — appelé à chaque exécution.
+    La préférence est mémorisée dans l'URL (?theme=) pour survivre au rafraîchissement."""
+    if "ui_theme" not in st.session_state:
+        qp = st.query_params.get("theme")
+        st.session_state.ui_theme = qp if qp in ("light", "dark") else "light"
+    css = _THEME_DARK if st.session_state.ui_theme == "dark" else _THEME_LIGHT
+    st.markdown(css, unsafe_allow_html=True)
+
+
+def theme_toggle(key, location=None):
+    """Bascule clair/sombre — bouton icône discret (lune/soleil monochrome)."""
+    loc = location or st
+    cur = st.session_state.get("ui_theme", "light")
+    icon = ":material/dark_mode:" if cur == "light" else ":material/light_mode:"
+    tip = "Passer en mode sombre" if cur == "light" else "Passer en mode clair"
+    if loc.button("", icon=icon, key=key, help=tip):
+        st.session_state.ui_theme = "dark" if cur == "light" else "light"
+        st.query_params["theme"] = st.session_state.ui_theme
+        st.rerun()
+
+
+apply_theme()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -684,16 +790,21 @@ def init_checker():
 # ═══════════════════════════════════════════════════════════
 def render_sidebar(checker, authenticator=None):
     with st.sidebar:
-        # Logo
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0 1.75rem;">
-            <div style="font-size: 1.9rem; line-height: 1;">🕊️</div>
-            <div style="line-height: 1.1;">
-                <div style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em;">CFPDC</div>
-                <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem;">Gestion des Salles</div>
+        # Logo + bascule de thème (icône discrète à droite)
+        lcol, tcol = st.columns([4, 1], vertical_alignment="center")
+        with lcol:
+            st.markdown("""
+            <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0;">
+                <div style="font-size: 1.9rem; line-height: 1;">🕊️</div>
+                <div style="line-height: 1.1;">
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em;">CFPDC</div>
+                    <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem;">Gestion des Salles</div>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+        with tcol:
+            theme_toggle("theme_sidebar")
+        st.markdown("<div style='margin-bottom: 1.25rem;'></div>", unsafe_allow_html=True)
 
         # ── Utilisateur connecté ──
         if st.session_state.get("name"):
@@ -1158,45 +1269,36 @@ def onglet_editer_planning(checker):
         st.warning(st.session_state.ep_add_warning)
         st.session_state.ep_add_warning = None
 
-    st.markdown("""
-    <div style="margin-bottom: 1rem;">
-        <h3 style="margin: 0; font-size: 1.1rem;">Nouvelle réservation</h3>
-    </div>
-    """, unsafe_allow_html=True)
+    @st.dialog("Ajouter une nouvelle réservation", width="large")
+    def _dialog_ajout_reservation():
+        with st.form(key="ep_add_form", border=False):
+            a_col1, a_col2, a_col3 = st.columns(3)
+            with a_col1:
+                add_nom = st.text_input("Nom", placeholder="Nom du réservant", key="add_nom")
+                add_horaire = st.text_input("Horaire", placeholder="15H30 - 18H00", key="add_horaire")
+                add_date_str = st.text_input("Date (JJ/MM/AA)", value=ep_date.strftime("%d/%m/%y"), key="add_date")
+            with a_col2:
+                add_accompte = st.text_input("Accompte (€)", placeholder="100", key="add_accompte")
+                add_reste = st.text_input("Reste (€)", placeholder="550", key="add_reste")
+                add_prix = st.text_input("Prix loc. (€)", placeholder="650", key="add_prix")
+            with a_col3:
+                add_caution = st.text_input("Caution", placeholder="Oui", key="add_caution")
+                add_telephone = st.text_input("Téléphone", placeholder="06 12 34 56 78", key="add_telephone")
+                add_salle_select = st.selectbox(
+                    "Salle",
+                    options=["Salle principale", "Salle du fond", "Salle du milieu"],
+                    key="add_salle_select"
+                )
 
-    st.markdown("<div class='form-section'>", unsafe_allow_html=True)
-
-    with st.form(key="ep_add_form", border=False):
-        a_col1, a_col2, a_col3 = st.columns(3)
-        with a_col1:
-            add_nom = st.text_input("Nom", placeholder="Nom du réservant", key="add_nom")
-            add_horaire = st.text_input("Horaire", placeholder="15H30 - 18H00", key="add_horaire")
-            add_date_str = st.text_input("Date (JJ/MM/AA)", value=ep_date.strftime("%d/%m/%y"), key="add_date")
-        with a_col2:
-            add_accompte = st.text_input("Accompte (€)", placeholder="100", key="add_accompte")
-            add_reste = st.text_input("Reste (€)", placeholder="550", key="add_reste")
-            add_prix = st.text_input("Prix loc. (€)", placeholder="650", key="add_prix")
-        with a_col3:
-            add_caution = st.text_input("Caution", placeholder="Oui", key="add_caution")
-            add_telephone = st.text_input("Téléphone", placeholder="06 12 34 56 78", key="add_telephone")
-            add_salle_select = st.selectbox(
-                "Salle",
-                options=["Salle principale", "Salle du fond", "Salle du milieu"],
-                key="add_salle_select"
-            )
-
-        add_submitted = st.form_submit_button("Ajouter la réservation", type="primary", use_container_width=True)
+            add_submitted = st.form_submit_button("Ajouter la réservation", type="primary", use_container_width=True)
 
         if add_submitted:
             if not add_nom:
-                st.session_state.ep_add_error = "Le nom est obligatoire."
-                st.rerun()
+                st.error("Le nom est obligatoire.")
             elif not add_horaire:
-                st.session_state.ep_add_error = "L'horaire est obligatoire."
-                st.rerun()
+                st.error("L'horaire est obligatoire.")
             elif not add_date_str:
-                st.session_state.ep_add_error = "La date est obligatoire."
-                st.rerun()
+                st.error("La date est obligatoire.")
             else:
                 new_data = {
                     'salle': add_salle_select,
@@ -1250,12 +1352,14 @@ def onglet_editer_planning(checker):
                         notifications.envoyer_nouvel_ajout(checker, new_data)
                     except Exception as e:
                         print(f"[App] Erreur notification nouvel ajout: {e}")
-                else:
-                    st.session_state.ep_add_error = info
-                    st.session_state.ep_add_success = False
-                st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
+                    st.rerun()  # ferme la modale et affiche le message de succès
+                else:
+                    st.error(f"Erreur : {info}")
+
+    st.markdown("<div style='margin-bottom: 0.5rem;'></div>", unsafe_allow_html=True)
+    if st.button("➕ Ajouter une nouvelle réservation", type="primary", use_container_width=True, key="ep_open_add"):
+        _dialog_ajout_reservation()
 
 
 def onglet_notifications(checker):
@@ -1888,9 +1992,14 @@ def render_login_screen(checker, authenticator):
     _, center, _ = st.columns([1, 2, 1])
 
     with center:
+        # Bascule de thème (icône discrète en haut à droite)
+        _, tcol = st.columns([6, 1])
+        with tcol:
+            theme_toggle("theme_login")
+
         # Header
         st.markdown(f"""
-        <div style="text-align: center; padding: 2.5rem 0 1.5rem;">
+        <div style="text-align: center; padding: 1rem 0 1.5rem;">
             <div style="font-size: 3rem; line-height: 1; margin-bottom: 0.5rem;">🕊️</div>
             <h2 style="font-size: 1.6rem; margin: 0; font-weight: 800; letter-spacing: -0.02em;">CFPDC</h2>
             <p style="color: #94a3b8; margin-top: 0.35rem; font-size: 0.9rem;">Gestion des Salles</p>
