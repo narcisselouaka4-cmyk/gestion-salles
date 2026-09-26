@@ -563,6 +563,16 @@ _THEME_DARK = f"""
         border-color: rgba(255,255,255,0.14) !important;
     }}
     {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(255,255,255,0.10) !important; }}
+    /* Champs date : fond sombre + texte clair (sinon date invisible en sombre) */
+    {_SC} [data-testid="stDateInput"] div[data-baseweb="input"],
+    {_SC} [data-testid="stDateInput"] input,
+    section[data-testid="stSidebar"] [data-testid="stDateInput"] div[data-baseweb="input"],
+    section[data-testid="stSidebar"] [data-testid="stDateInput"] input {{
+        background-color: #1b2130 !important;
+        color: #e6e9ef !important;
+        -webkit-text-fill-color: #e6e9ef !important;
+        border-color: rgba(255,255,255,0.16) !important;
+    }}
     {_SC} div[data-testid="stButton"] > button[kind="secondary"],
     {_SC} div[data-testid="stButton"] > button[kind="secondaryFormSubmit"],
     {_SC} button[kind="secondaryFormSubmit"] {{
@@ -1806,15 +1816,21 @@ def open_settings_dialog(checker, authenticator):
 
             st.markdown("<div style='margin: 0.75rem 0;'></div>", unsafe_allow_html=True)
 
-            notif_status = "✅ Abonné" if subscribed else "❌ Désabonné"
-            st.markdown(f"**Statut :** {notif_status}")
+            # Sans email → forcément désabonné (impossible de recevoir).
+            has_email = bool((current_email or "").strip())
+            subscribed = has_email and subscribed
 
-            if subscribed:
+            if not has_email:
+                st.markdown("**Statut :** ❌ Désabonné")
+                st.caption("Renseignez votre email ci-dessus pour recevoir les notifications.")
+            elif subscribed:
+                st.markdown("**Statut :** ✅ Abonné")
                 if st.button("🔕 Me désabonner des notifications", use_container_width=True):
                     preferences.set_subscribed(current_user, False)
                     st.success("Vous êtes maintenant désabonné des notifications.")
                     st.rerun()
             else:
+                st.markdown("**Statut :** ❌ Désabonné")
                 if st.button("🔔 Me réabonner aux notifications", type="primary", use_container_width=True):
                     preferences.set_subscribed(current_user, True)
                     st.success("✅ Vous êtes maintenant abonné aux notifications.")
@@ -1888,44 +1904,29 @@ def open_settings_dialog(checker, authenticator):
                             else:
                                 st.error(f"❌ {info}")
 
-        # ── Section Mot de passe ──
-        st.markdown("### 🔑 Modifier mon mot de passe")
-        st.markdown("<div class='form-section'>", unsafe_allow_html=True)
-
-        with st.form(key="settings_pwd_form", border=False):
-            old_pwd = st.text_input("Ancien mot de passe", type="password", key="settings_old_pwd")
-            c1, c2 = st.columns(2)
-            with c1:
+        # ── Section Mot de passe (repliable, sans ancien mot de passe) ──
+        with st.expander("🔑 Modifier mon mot de passe", expanded=False):
+            with st.form(key="settings_pwd_form", border=False):
                 new_pwd = st.text_input("Nouveau mot de passe", type="password", key="settings_new_pwd")
-            with c2:
-                new_pwd_confirm = st.text_input("Confirmer", type="password", key="settings_new_pwd_confirm")
+                new_pwd_confirm = st.text_input("Confirmer le mot de passe", type="password", key="settings_new_pwd_confirm")
 
-            pwd_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
+                pwd_submitted = st.form_submit_button("Mettre à jour", type="primary", use_container_width=True)
 
-            if pwd_submitted:
-                if not old_pwd or not new_pwd:
-                    st.error("L'ancien et le nouveau mot de passe sont obligatoires.")
-                elif new_pwd != new_pwd_confirm:
-                    st.error("Les mots de passe ne correspondent pas.")
-                elif len(new_pwd) < 4:
-                    st.error("Le mot de passe doit faire au moins 4 caractères.")
-                else:
-                    all_users = checker.get_users_google()
-                    if current_user not in all_users:
-                        st.error("❌ Votre compte n'a pas été trouvé.")
+                if pwd_submitted:
+                    if not new_pwd:
+                        st.error("Veuillez saisir un nouveau mot de passe.")
+                    elif new_pwd != new_pwd_confirm:
+                        st.error("Les mots de passe ne correspondent pas.")
+                    elif len(new_pwd) < 4:
+                        st.error("Le mot de passe doit faire au moins 4 caractères.")
                     else:
                         h = stauth.Hasher()
-                        if not h.check_pw(old_pwd, all_users[current_user]["password"]):
-                            st.error("❌ Ancien mot de passe incorrect.")
+                        new_hash = h.hash(new_pwd)
+                        success, info = checker.update_user_password_google(current_user, new_hash)
+                        if success:
+                            st.success(f"✅ {info}")
                         else:
-                            new_hash = h.hash(new_pwd)
-                            success, info = checker.update_user_password_google(current_user, new_hash)
-                            if success:
-                                st.success(f"✅ {info}")
-                            else:
-                                st.error(f"❌ {info}")
-
-        st.markdown("</div>", unsafe_allow_html=True)
+                            st.error(f"❌ {info}")
 
         # ── Section Admin : gestion des comptes ──
         if is_admin:
@@ -2188,7 +2189,7 @@ def render_login_screen(checker, authenticator):
                 try:
                     authenticator.login(location='main', fields={
                         'Form name': 'Se connecter',
-                        'Username': "Nom d'utilisateur",
+                        'Username': "Nom d'utilisateur ou pseudo",
                         'Password': 'Mot de passe',
                         'Login': 'Se connecter',
                     })
@@ -2216,13 +2217,10 @@ def render_login_screen(checker, authenticator):
                 st.markdown("<h4 style='margin: 0 0 1rem; font-size: 1.1rem;'>Créer un compte</h4>", unsafe_allow_html=True)
 
                 with st.form(key="login_register_form", border=False):
-                    r1, r2 = st.columns(2)
-                    with r1:
-                        reg_username = st.text_input("Nom d'utilisateur", placeholder="ex: pastor", key="reg_username")
-                        reg_pwd = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères", key="reg_pwd")
-                    with r2:
-                        reg_name = st.text_input("Nom affiché", placeholder="ex: Pastor Jean", key="reg_name")
-                        reg_pwd_confirm = st.text_input("Confirmer", type="password", placeholder="Répéter", key="reg_pwd_confirm")
+                    reg_username = st.text_input("Nom d'utilisateur", placeholder="ex: pastor", key="reg_username")
+                    reg_pwd = st.text_input("Mot de passe", type="password", placeholder="Min. 4 caractères", key="reg_pwd")
+                    reg_pwd_confirm = st.text_input("Confirmer le mot de passe", type="password", placeholder="Retapez le mot de passe", key="reg_pwd_confirm")
+                    reg_name = st.text_input("Pseudo", placeholder="ex: Pastor Jean", key="reg_name")
 
                     reg_submitted = st.form_submit_button("Créer le compte", type="primary", use_container_width=True)
 
@@ -2319,6 +2317,28 @@ def main():
         except Exception:
             pass
 
+    # Alias pseudo → nom d'utilisateur : permet de se connecter avec le pseudo.
+    # streamlit-authenticator met l'identifiant saisi en minuscules ; on ajoute
+    # donc des entrées en minuscules pointant vers le même compte.
+    pseudo_alias = {}
+    try:
+        base_users = dict(credentials["usernames"])
+        existing = {u.lower() for u in base_users}
+        for uname, udata in base_users.items():
+            pseudo = (udata.get("name") or "").strip().lower()
+            if not pseudo or pseudo in existing:
+                continue
+            if pseudo in pseudo_alias:
+                pseudo_alias[pseudo] = None  # pseudo ambigu → désactivé
+                continue
+            pseudo_alias[pseudo] = uname
+        for pkey, real in list(pseudo_alias.items()):
+            if real:
+                credentials["usernames"][pkey] = dict(credentials["usernames"][real])
+        st.session_state["_pseudo_alias"] = {k: v for k, v in pseudo_alias.items() if v}
+    except Exception:
+        st.session_state["_pseudo_alias"] = {}
+
     authenticator = stauth.Authenticate(
         credentials,
         cookie_name,
@@ -2345,8 +2365,12 @@ def main():
     authentication_status = st.session_state.get('authentication_status')
 
     if authentication_status is True:
-        name = st.session_state.get('name')
         username = st.session_state.get('username')
+        # Si connexion via un pseudo, revenir au vrai nom d'utilisateur
+        alias_map = st.session_state.get("_pseudo_alias", {})
+        if username in alias_map:
+            username = alias_map[username]
+        name = st.session_state.get('name')
         st.session_state["username"] = username
         st.session_state["name"] = name
 
