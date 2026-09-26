@@ -1066,7 +1066,7 @@ def onglet_gestion_salle(checker):
                         selected.append(s)
 
         gs_search_clicked = st.button(
-            "🔍 Rechercher", type="primary", use_container_width=True, key="gs_search"
+            "🔍 Rechercher", type="primary", use_container_width=True, key="gs_search_btn"
         )
 
     st.session_state.global_date = d
@@ -1252,7 +1252,7 @@ def onglet_editer_planning(checker):
                         ep_selected.append(s)
 
         ep_search_clicked = st.button(
-            "🔍 Rechercher", type="primary", use_container_width=True, key="ep_search"
+            "🔍 Rechercher", type="primary", use_container_width=True, key="ep_search_btn"
         )
 
     st.session_state.global_date = ep_date
