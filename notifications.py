@@ -51,25 +51,85 @@ def _smtp_config() -> dict:
     }
 
 
+def _brevo_config() -> dict:
+    """Config de l'API HTTP Brevo (fonctionne là où le SMTP est bloqué, ex. Render)."""
+    return {
+        "api_key": os.environ.get("BREVO_API_KEY", "").strip(),
+        "sender_email": (os.environ.get("BREVO_SENDER_EMAIL")
+                         or os.environ.get("NOTIF_FROM_EMAIL")
+                         or os.environ.get("SMTP_EMAIL", "")).strip(),
+        "from_name": os.environ.get("NOTIF_FROM_NAME", "CFPDC Salles"),
+    }
+
+
 def notifications_active() -> bool:
-    """Indique si l'envoi de notifications est activé (SMTP configuré)."""
+    """Indique si l'envoi d'emails est possible (API HTTP Brevo OU SMTP configuré)."""
     if os.environ.get("NOTIF_ENABLED", os.environ.get("NOTIF_ENABLE", "")).lower() == "false":
         return False
+    brevo = _brevo_config()
+    if brevo["api_key"] and brevo["sender_email"]:
+        return True
     cfg = _smtp_config()
     return bool(cfg["email"] and cfg["password"])
+
+
+def _envoyer_via_brevo(destinataires: list, sujet: str, corps_html: str) -> tuple:
+    """Envoi via l'API HTTP Brevo (port 443, non bloqué par Render). Retourne (success, error)."""
+    import json
+    import urllib.request
+    import urllib.error
+
+    cfg = _brevo_config()
+    payload = {
+        "sender": {"name": cfg["from_name"], "email": cfg["sender_email"]},
+        "to": [{"email": d} for d in destinataires],
+        "subject": sujet,
+        "htmlContent": corps_html,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=data,
+        headers={
+            "accept": "application/json",
+            "content-type": "application/json",
+            "api-key": cfg["api_key"],
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()
+        return True, None
+    except urllib.error.HTTPError as e:
+        try:
+            detail = e.read().decode("utf-8", "ignore")
+        except Exception:
+            detail = ""
+        print(f"[Notifications] Brevo HTTP {e.code}: {detail}")
+        return False, f"Brevo HTTP {e.code}: {detail[:200]}"
+    except Exception as e:
+        print(f"[Notifications] Erreur Brevo: {e}")
+        return False, str(e)
 
 
 def _envoyer_email(destinataires: list, sujet: str, corps_html: str) -> tuple:
     """
     Envoie un email HTML à une liste de destinataires.
-    Retourne (success, error).
+    Privilégie l'API HTTP Brevo (si configurée), sinon SMTP. Retourne (success, error).
     """
     if not destinataires:
         return False, "Aucun destinataire"
 
+    # 1. API HTTP Brevo (recommandé sur Render où le SMTP sortant est bloqué)
+    brevo = _brevo_config()
+    if brevo["api_key"] and brevo["sender_email"]:
+        return _envoyer_via_brevo(destinataires, sujet, corps_html)
+
+    # 2. Repli SMTP (fonctionne en local)
     cfg = _smtp_config()
     if not cfg["email"] or not cfg["password"]:
-        return False, "SMTP non configuré (SMTP_EMAIL/SMTP_PASSWORD manquant)"
+        return False, "Aucun service email configuré (BREVO_API_KEY ou SMTP_EMAIL/SMTP_PASSWORD)"
 
     msg = EmailMessage()
     msg["Subject"] = sujet
@@ -93,8 +153,8 @@ def _envoyer_email(destinataires: list, sujet: str, corps_html: str) -> tuple:
                 server.send_message(msg)
         return True, None
     except Exception as e:
-        print(f"[Notifications] Erreur envoi email: {e}")
-        return False, str(e)
+        print(f"[Notifications] Erreur envoi email SMTP: {e}")
+        return False, f"{e} — sur Render, le SMTP est souvent bloqué : configurez BREVO_API_KEY."
 
 
 # ═══════════════════════════════════════════════════════════

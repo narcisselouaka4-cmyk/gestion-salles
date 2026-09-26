@@ -91,13 +91,17 @@ st.markdown("""
         padding: 2rem 2.5rem 4rem;
     }
 
-    /* ── Sidebar (fond ardoise sobre, adapté clair & sombre) ── */
-    section[data-testid="stSidebar"] {
-        background: #0f172a !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
-    }
+    /* ── Sidebar (fond et couleurs pilotés par le thème via --sb-*) ── */
     section[data-testid="stSidebar"] .block-container { padding-top: 1.25rem; }
     section[data-testid="stSidebar"] .css-1d391kg { background: transparent; }
+    .sb-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--sb-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.75rem;
+    }
 
     /* ── Typographie ── */
     h1 { font-weight: 700; letter-spacing: -0.02em; }
@@ -567,6 +571,29 @@ _THEME_DARK = f"""
         border-color: rgba(255,255,255,0.16) !important;
     }}
     .kpi-card, .glass-card, .detail-card {{ background: rgba(255,255,255,0.04) !important; }}
+
+    /* ── Sidebar (mode sombre) ── */
+    :root {{
+        --sb-bg: #0f172a; --sb-text: #f1f5f9; --sb-muted: #94a3b8;
+        --sb-hairline: rgba(255,255,255,0.09); --sb-card: rgba(255,255,255,0.05);
+    }}
+    section[data-testid="stSidebar"] {{ background-color: var(--sb-bg) !important; border-right: 1px solid rgba(255,255,255,0.06); }}
+    section[data-testid="stSidebar"] .stButton > button {{
+        background-color: #1b2130 !important; color: #e6e9ef !important; border-color: rgba(255,255,255,0.16) !important;
+    }}
+    section[data-testid="stSidebar"] input,
+    section[data-testid="stSidebar"] [data-baseweb="input"],
+    section[data-testid="stSidebar"] [data-baseweb="base-input"] {{
+        background-color: #1b2130 !important; color: #e6e9ef !important; border-color: rgba(255,255,255,0.16) !important;
+    }}
+    /* Bouton-icône de thème : toujours transparent et rond (prioritaire) */
+    .st-key-theme_sidebar button, .st-key-theme_login button {{
+        background: transparent !important; border: 1px solid var(--hairline) !important;
+        width: 36px !important; height: 36px !important; border-radius: 50% !important; padding: 0 !important;
+    }}
+    .st-key-theme_sidebar button {{ border-color: rgba(255,255,255,0.16) !important; }}
+    .st-key-theme_sidebar button [data-testid="stIconMaterial"],
+    .st-key-theme_login button [data-testid="stIconMaterial"] {{ color: #e6e9ef !important; }}
 </style>
 """
 
@@ -590,6 +617,27 @@ _THEME_LIGHT = f"""
         border-color: rgba(0,0,0,0.12) !important;
     }}
     {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(0,0,0,0.10) !important; }}
+
+    /* ── Sidebar (mode clair) ── */
+    :root {{
+        --sb-bg: #f1f5f9; --sb-text: #0f172a; --sb-muted: #64748b;
+        --sb-hairline: rgba(0,0,0,0.08); --sb-card: rgba(0,0,0,0.04);
+    }}
+    section[data-testid="stSidebar"] {{ background-color: var(--sb-bg) !important; border-right: 1px solid rgba(0,0,0,0.08); }}
+    section[data-testid="stSidebar"] .stButton > button {{
+        background-color: #ffffff !important; color: #1e293b !important; border-color: rgba(0,0,0,0.14) !important;
+    }}
+    section[data-testid="stSidebar"] input,
+    section[data-testid="stSidebar"] [data-baseweb="input"],
+    section[data-testid="stSidebar"] [data-baseweb="base-input"] {{
+        background-color: #ffffff !important; color: #1e293b !important; border-color: rgba(0,0,0,0.14) !important;
+    }}
+    .st-key-theme_sidebar button, .st-key-theme_login button {{
+        background: transparent !important; border: 1px solid rgba(0,0,0,0.14) !important;
+        width: 36px !important; height: 36px !important; border-radius: 50% !important; padding: 0 !important;
+    }}
+    .st-key-theme_sidebar button [data-testid="stIconMaterial"],
+    .st-key-theme_login button [data-testid="stIconMaterial"] {{ color: #1e293b !important; }}
 </style>
 """
 
@@ -808,7 +856,7 @@ def init_checker():
 # ═══════════════════════════════════════════════════════════
 # SIDEBAR — Fonctionnelle
 # ═══════════════════════════════════════════════════════════
-def render_sidebar(checker, authenticator=None):
+def render_sidebar(checker, authenticator):
     with st.sidebar:
         # Logo + bascule de thème (icône discrète à droite)
         lcol, tcol = st.columns([4, 1], vertical_alignment="center")
@@ -817,8 +865,8 @@ def render_sidebar(checker, authenticator=None):
             <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0;">
                 <div style="font-size: 1.9rem; line-height: 1;">🕊️</div>
                 <div style="line-height: 1.1;">
-                    <div style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em;">CFPDC</div>
-                    <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem;">Gestion des Salles</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--sb-text); letter-spacing: -0.02em;">CFPDC</div>
+                    <div style="font-size: 0.72rem; color: var(--sb-muted); margin-top: 0.15rem;">Gestion des Salles</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -829,35 +877,20 @@ def render_sidebar(checker, authenticator=None):
         # ── Utilisateur connecté ──
         if st.session_state.get("name"):
             st.markdown(f"""
-            <div style="background: rgba(43,92,158,0.15); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; border: 1px solid rgba(43,92,158,0.2);">
-                <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Connecté</div>
-                <div style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin-top: 0.25rem;">👤 {st.session_state.get("name")}</div>
+            <div style="background: rgba(43,92,158,0.15); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; border: 1px solid rgba(43,92,158,0.25);">
+                <div style="font-size: 0.7rem; color: var(--sb-muted); text-transform: uppercase; letter-spacing: 0.05em;">Connecté</div>
+                <div style="font-size: 0.95rem; font-weight: 700; color: var(--sb-text); margin-top: 0.25rem;">👤 {st.session_state.get("name")}</div>
             </div>
             """, unsafe_allow_html=True)
             if authenticator:
                 authenticator.logout(button_name='Déconnexion', location='sidebar')
-            st.markdown("<hr style='border-color: #334155; margin: 1rem 0;'>", unsafe_allow_html=True)
+            st.markdown("<hr style='border-color: var(--sb-hairline); margin: 1rem 0;'>", unsafe_allow_html=True)
 
-        # ── Paramètres rapides ──
-        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Paramètres rapides</div>", unsafe_allow_html=True)
+        # ── Paramètres rapides (date uniquement) ──
+        st.markdown("<div class='sb-label'>Paramètres rapides</div>", unsafe_allow_html=True)
 
-        st.caption("Ces valeurs sont préremplies dans les deux onglets")
-
-        if "global_salle" not in st.session_state:
-            st.session_state.global_salle = "Salle principale"
         if "global_date" not in st.session_state:
             st.session_state.global_date = datetime.now().date()
-
-        salle_options = ["Salle principale", "Salle du fond", "Salle du milieu"]
-        salle_idx = salle_options.index(st.session_state.global_salle) if st.session_state.global_salle in salle_options else 0
-
-        sidebar_salle = st.selectbox(
-            "Salle",
-            options=salle_options,
-            index=salle_idx,
-            key="sidebar_salle",
-            label_visibility="collapsed"
-        )
 
         sidebar_date = st.date_input(
             "Date",
@@ -867,12 +900,8 @@ def render_sidebar(checker, authenticator=None):
             key="sidebar_date",
             label_visibility="collapsed"
         )
-
-        # Sync to global
-        st.session_state.global_salle = sidebar_salle
         st.session_state.global_date = sidebar_date
 
-        # Boutons rapides
         c1, c2 = st.columns(2)
         with c1:
             if st.button("📅 Aujourd'hui", use_container_width=True):
@@ -883,15 +912,15 @@ def render_sidebar(checker, authenticator=None):
                 st.session_state.global_date = (datetime.now() + timedelta(days=1)).date()
                 st.rerun()
 
-        st.markdown("<hr style='border-color: #334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: var(--sb-hairline); margin: 1.5rem 0;'>", unsafe_allow_html=True)
 
         # ── Statut des salles — maintenant ──
-        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Statut actuel</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sb-label'>Statut actuel</div>", unsafe_allow_html=True)
 
         now = datetime.now()
         now_time = now.time()
 
-        for salle_name in salle_options:
+        for salle_name in SALLES_ORDER_DISPLAY:
             try:
                 result = checker.check_availability(salle_name.lower(), now.date(), now_time)
                 is_libre = result.get("libre", False)
@@ -911,22 +940,18 @@ def render_sidebar(checker, authenticator=None):
                     next_info = f"{len(occs)} occupation(s)"
 
                 st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <div style="font-size: 0.85rem; color: #e2e8f0; font-weight: 500;">{salle_name}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--sb-hairline);">
+                    <div style="font-size: 0.85rem; color: var(--sb-text); font-weight: 500;">{salle_name}</div>
                     <div style="text-align: right;">
                         <div style="font-size: 0.75rem; font-weight: 700; color: {status_color};">{status_text}</div>
-                        <div style="font-size: 0.65rem; color: #64748b;">{next_info}</div>
+                        <div style="font-size: 0.65rem; color: var(--sb-muted);">{next_info}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             except Exception:
                 pass
 
-        st.markdown("<hr style='border-color: #334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
-
-        # ── Raccourcis ──
-        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;'>Raccourcis</div>", unsafe_allow_html=True)
-
+        # ── Raccourcis (Google Sheet uniquement) ──
         GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
         if not GOOGLE_SHEET_ID:
             try:
@@ -935,40 +960,27 @@ def render_sidebar(checker, authenticator=None):
                 GOOGLE_SHEET_ID = ""
 
         if GOOGLE_SHEET_ID:
+            st.markdown("<hr style='border-color: var(--sb-hairline); margin: 1.5rem 0;'>", unsafe_allow_html=True)
+            st.markdown("<div class='sb-label'>Raccourcis</div>", unsafe_allow_html=True)
             sheet_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/edit"
             st.markdown(f'''
-            <a href="{sheet_url}" target="_blank" style="display: block; text-decoration: none; margin-bottom: 0.5rem;">
-                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #94a3b8; font-weight: 500; transition: all 0.2s;">
+            <a href="{sheet_url}" target="_blank" style="display: block; text-decoration: none;">
+                <div style="background: var(--sb-card); border: 1px solid var(--sb-hairline); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: var(--sb-text); font-weight: 500;">
                     📊 Ouvrir Google Sheet →
                 </div>
             </a>
             ''', unsafe_allow_html=True)
 
-        st.markdown("""
-        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #94a3b8; font-weight: 500;">
-            📁 Gestion de Salle → Lecture seule, recherche par date/heure
-        </div>
-        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-top: 0.5rem;">
-            ✏️ Planning → Ajouter, modifier, supprimer des réservations
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Footer
-        st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
-
-        # ── Bouton réglages (rouage) ──
-        st.markdown("<div style='font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;'>Réglages</div>", unsafe_allow_html=True)
+        # ── Réglages ──
+        st.markdown("<hr style='border-color: var(--sb-hairline); margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        st.markdown("<div class='sb-label'>Réglages</div>", unsafe_allow_html=True)
         if st.button("⚙️ Réglages avancés", use_container_width=True, key="btn_settings"):
-            st.session_state.show_settings = True
-            st.rerun()
+            open_settings_dialog(checker, authenticator)
 
-        st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
-        st.markdown("""
-        <div style="text-align: center; font-size: 0.7rem; color: #475569;">
-            CFPDC © 2024<br>
-            <span style="color: #334155;">v2.1 — Dashboard Pro</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div style='margin-top: 1.5rem; text-align: center; font-size: 0.7rem; color: var(--sb-muted);'>CFPDC © 2024</div>",
+            unsafe_allow_html=True,
+        )
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1218,7 +1230,6 @@ def render_reservations_salle(checker, salle_name, d):
 
 
 def onglet_editer_planning(checker):
-    default_salle = st.session_state.get("global_salle", "Salle principale")
     default_date = st.session_state.get("global_date", datetime.now().date())
 
     st.markdown("""
@@ -1656,9 +1667,7 @@ def save_user_email(checker, username, email):
         ok, info = False, str(e)
     if ok:
         return True, "Email enregistré."
-    # Le Sheet peut échouer (compte hors Sheet, ex. admin) : le cache local
-    # suffit pour la session en cours.
-    return True, "Email enregistré (localement)."
+    return False, f"Email gardé pour cette session, mais non enregistré durablement ({info})."
 
 
 def collapse_sidebar_on_mobile():
@@ -1710,7 +1719,10 @@ def render_email_prompt(checker):
         email = preferences.get_user_email(current_user, checker)
     except Exception:
         email = ""
-    if email:
+    # A un email OU a déjà refusé (persistant) → ne plus demander
+    dismissed = bool(preferences.get_pref(current_user, "email_prompt_dismissed", False))
+    if email or dismissed:
+        st.session_state.email_prompt_done = True
         return False
 
     @st.dialog("📧 Ajoutez votre adresse email")
@@ -1727,24 +1739,24 @@ def render_email_prompt(checker):
                 if not new_email or "@" not in new_email:
                     st.error("Veuillez saisir une adresse email valide.")
                 else:
-                    save_user_email(checker, current_user, new_email.strip())
+                    ok, msg = save_user_email(checker, current_user, new_email.strip())
                     st.session_state.email_prompt_done = True
-                    st.success("✅ Email enregistré.")
+                    (st.success if ok else st.warning)(msg)
                     st.rerun()
         with c2:
-            if st.button("Plus tard", use_container_width=True):
+            if st.button("Annuler", use_container_width=True):
+                preferences.set_pref(current_user, "email_prompt_dismissed", True)
                 st.session_state.email_prompt_done = True
                 st.rerun()
+        st.caption("Vous pourrez l'ajouter plus tard dans ⚙️ Réglages.")
 
     _d()
     return True
 
 
-def render_settings_dialog(checker, authenticator):
-    """Affiche le dialog des réglages avancés (depuis le bouton rouage)."""
-    if not st.session_state.get("show_settings", False):
-        return
-
+def open_settings_dialog(checker, authenticator):
+    """Ouvre le dialog des réglages avancés (appelé au clic sur le bouton rouage).
+    Appel direct (pas de flag persistant) : la croix ferme réellement le dialog."""
     current_user = st.session_state.get("username", "")
     admin_user = os.environ.get("AUTH_USER", "")
     is_admin = current_user == admin_user
@@ -1767,7 +1779,7 @@ def render_settings_dialog(checker, authenticator):
                     st.error("❌ Email invalide.")
                 else:
                     ok, msg = save_user_email(checker, current_user, new_email.strip())
-                    st.success(f"✅ {msg}")
+                    (st.success if ok else st.warning)(msg)
                     st.rerun()
 
             # ── Option avancée : email de vérification distinct ──
@@ -1987,7 +1999,6 @@ def render_settings_dialog(checker, authenticator):
         # Bouton fermer
         st.markdown("<div style='margin: 0.5rem 0;'></div>", unsafe_allow_html=True)
         if st.button("Fermer", use_container_width=True):
-            st.session_state.show_settings = False
             st.rerun()
 
     _dialog()
@@ -2367,7 +2378,7 @@ def main():
 
         # Invitation à renseigner l'email (récupération de mot de passe).
         # Prioritaire : si elle s'affiche, on n'ouvre pas d'autre modale.
-        email_prompt_open = render_email_prompt(checker)
+        render_email_prompt(checker)
 
         # Onglets principaux (Utilisateurs et Notifications sont dans le rouage ⚙️)
         if is_admin:
@@ -2384,11 +2395,6 @@ def main():
         if is_admin:
             with tab3:
                 onglet_notifications(checker)
-
-        # Dialog des réglages (rouage ⚙️ dans la sidebar) — jamais en même
-        # temps que la modale email (une seule modale à la fois).
-        if not email_prompt_open:
-            render_settings_dialog(checker, authenticator)
 
     elif authentication_status == False:
         st.error("❌ Mot de passe incorrect")

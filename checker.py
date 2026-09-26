@@ -1522,14 +1522,19 @@ class SalleChecker:
             except gspread.exceptions.WorksheetNotFound:
                 return False, "Onglet 'Utilisateurs' introuvable"
 
+            # S'assurer que la colonne 'email' (F) existe, sinon l'email écrit
+            # ne serait jamais relu par get_users_google.
+            self._ensure_users_headers(worksheet)
+
             all_values, error = self._get_worksheet_values_cached("Utilisateurs")
             if error:
                 return False, error
 
+            target = str(username).strip().lower()
             for i, row in enumerate(all_values):
                 if i == 0:
                     continue  # header
-                if len(row) > 0 and str(row[0]).strip() == username:
+                if len(row) > 0 and str(row[0]).strip().lower() == target:
                     worksheet.update(values=[[email]], range_name=f'F{i+1}', value_input_option='USER_ENTERED')
                     self._invalidate_sheet_cache("Utilisateurs")
                     return True, f"Email de {username} mis à jour"
