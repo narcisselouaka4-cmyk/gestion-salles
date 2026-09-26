@@ -21,6 +21,7 @@ except ImportError:
 from checker import SalleChecker
 import notifications
 import preferences
+import keepalive
 
 # ═══════════════════════════════════════════════════════════
 # CONFIG PAGE
@@ -2179,6 +2180,13 @@ def render_login_screen(checker, authenticator):
 def main():
     # ── App principale (checker initialisé avant auth pour lire les users) ──
     checker = init_checker()
+
+    # Keep-alive : évite la mise en veille sur Render (démarre dès le 1er chargement,
+    # même sur l'écran de connexion). Ne fait rien en local (pas d'URL publique).
+    try:
+        keepalive.KeepAlive.demarrer()
+    except Exception as e:
+        print(f"[App] Impossible de démarrer le keep-alive: {e}")
 
     # ═══════════════════════════════════════════════════════════
     # AUTHENTIFICATION — env vars / secrets + Google Sheets users
