@@ -19,6 +19,11 @@ try:
 except ImportError:
     GSPREAD_AVAILABLE = False
 
+# Colonne G de l'onglet 'Utilisateurs' : l'invitation à renseigner l'email
+# a-t-elle déjà été présentée ? (persistant, survit aux redéploiements)
+USERS_COL_EMAIL_PROMPT = "email_prompt_vu"
+_TRUTHY = ("oui", "true", "vrai", "1", "x", "yes")
+
 # Mapping des jours
 DAY_MAPPING = {
     "lundi": "lundi",
@@ -395,20 +400,24 @@ class SalleChecker:
 
     def _ensure_users_headers(self, worksheet):
         """
-        Garantit que les en-têtes de l'onglet 'Utilisateurs' incluent la colonne F (email).
-        Étend la grille si nécessaire.
+        Garantit que les en-têtes de l'onglet 'Utilisateurs' incluent la colonne
+        F (email) et la colonne G (email_prompt_vu). Étend la grille si nécessaire.
         """
         try:
-            if worksheet.col_count < 6:
-                worksheet.add_cols(6 - worksheet.col_count)
+            if worksheet.col_count < 7:
+                worksheet.add_cols(7 - worksheet.col_count)
 
             values = worksheet.get_all_values()
             if not values:
                 return
             header_row = values[0]
-            f_val = header_row[5].strip() if len(header_row) > 5 else ""
-            if not f_val:
-                worksheet.update(values=[['email']], range_name='F1')
+            changed = False
+            for idx, cell, name in ((5, 'F1', 'email'), (6, 'G1', USERS_COL_EMAIL_PROMPT)):
+                current = header_row[idx].strip() if len(header_row) > idx else ""
+                if not current:
+                    worksheet.update(values=[[name]], range_name=cell)
+                    changed = True
+            if changed:
                 self._invalidate_sheet_cache("Utilisateurs")
         except Exception as e:
             print(f"[ensure_users_headers] Erreur: {e}")
@@ -1541,6 +1550,77 @@ class SalleChecker:
             return False, f"Utilisateur {username} non trouvé"
         except Exception as e:
             return False, f"Erreur mise à jour email: {str(e)}"
+
+    def get_email_prompt_vu(self, username: str) -> bool:
+        """
+        Indique si l'invitation à renseigner l'email a déjà été présentée à
+        l'utilisateur (colonne 'email_prompt_vu' de l'onglet 'Utilisateurs').
+        Faux si la colonne ou l'utilisateur est absent.
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False
+
+        all_values, error = self._get_worksheet_values_cached("Utilisateurs")
+        if error or not all_values:
+            return False
+
+        headers = [str(h).strip().lower() for h in all_values[0]]
+        if USERS_COL_EMAIL_PROMPT not in headers:
+            return False
+        idx_flag = headers.index(USERS_COL_EMAIL_PROMPT)
+        idx_username = headers.index('username') if 'username' in headers else 0
+
+        target = str(username).strip().lower()
+        for row in all_values[1:]:
+            if len(row) > idx_username and str(row[idx_username]).strip().lower() == target:
+                val = str(row[idx_flag]).strip().lower() if len(row) > idx_flag else ""
+                return val in _TRUTHY
+        return False
+
+    def set_email_prompt_vu(self, username: str) -> tuple:
+        """
+        Marque l'invitation à renseigner l'email comme présentée (« oui » dans la
+        colonne 'email_prompt_vu'). Retourne (success, error_or_info).
+        """
+        if not self.google_sheet_id or not GSPREAD_AVAILABLE:
+            return False, "Google Sheets non configuré"
+
+        try:
+            client, error = self._get_google_client()
+            if error:
+                return False, error
+            if not client:
+                return False, "Client Google Sheets non initialisé"
+
+            spreadsheet = client.open_by_key(self.google_sheet_id)
+            try:
+                worksheet = spreadsheet.worksheet("Utilisateurs")
+            except gspread.exceptions.WorksheetNotFound:
+                return False, "Onglet 'Utilisateurs' introuvable"
+
+            self._ensure_users_headers(worksheet)
+
+            all_values, error = self._get_worksheet_values_cached("Utilisateurs")
+            if error:
+                return False, error
+
+            headers = [str(h).strip().lower() for h in all_values[0]] if all_values else []
+            if USERS_COL_EMAIL_PROMPT not in headers:
+                return False, f"Colonne '{USERS_COL_EMAIL_PROMPT}' absente"
+            col_flag = headers.index(USERS_COL_EMAIL_PROMPT) + 1
+            idx_username = headers.index('username') if 'username' in headers else 0
+
+            target = str(username).strip().lower()
+            for i, row in enumerate(all_values):
+                if i == 0:
+                    continue  # header
+                if len(row) > idx_username and str(row[idx_username]).strip().lower() == target:
+                    worksheet.update_cell(i + 1, col_flag, "oui")
+                    self._invalidate_sheet_cache("Utilisateurs")
+                    return True, f"Invitation email marquée comme vue pour {username}"
+            return False, f"Utilisateur {username} non trouvé"
+        except Exception as e:
+            return False, f"Erreur mise à jour email_prompt_vu: {str(e)}"
 
     def add_user_google(self, username: str, name: str, password_hash: str, created_by: str = "", email: str = "") -> tuple:
         """

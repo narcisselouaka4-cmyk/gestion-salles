@@ -1752,9 +1752,10 @@ def render_email_prompt(checker):
     pour pouvoir récupérer leur mot de passe par code de vérification.
 
     Affichée UNE SEULE FOIS par utilisateur : dès qu'elle apparaît, on mémorise
-    (en session ET en préférence persistante) qu'elle a été présentée. Elle ne
-    réapparaît donc plus — que l'utilisateur la referme avec la croix, recharge
-    l'appli, se reconnecte, lance une recherche ou change de thème.
+    (en session, en préférence locale ET dans le Google Sheet, colonne
+    'email_prompt_vu') qu'elle a été présentée. Elle ne réapparaît donc plus —
+    que l'utilisateur la referme avec la croix, recharge l'appli, se reconnecte,
+    lance une recherche, change de thème ou que l'appli soit redéployée.
     """
     if st.session_state.get("email_prompt_done"):
         return False
@@ -1765,18 +1766,30 @@ def render_email_prompt(checker):
         email = preferences.get_user_email(current_user, checker)
     except Exception:
         email = ""
-    # A un email OU a déjà été invité (persistant) → ne plus demander
+    # A un email OU a déjà été invité → ne plus demander. Le « déjà vu » est lu
+    # en local puis dans le Google Sheet : le fichier local est effacé à chaque
+    # redéploiement Render, le Sheet non.
     dismissed = bool(preferences.get_pref(current_user, "email_prompt_dismissed", False))
+    if not email and not dismissed:
+        try:
+            dismissed = checker.get_email_prompt_vu(current_user)
+        except Exception:
+            dismissed = False
     if email or dismissed:
         st.session_state.email_prompt_done = True
         return False
 
-    # On marque TOUT DE SUITE l'invite comme présentée, avant même d'ouvrir la
-    # modale. Ainsi, quelle que soit la façon dont l'utilisateur la referme
-    # (croix, Échap, clic en dehors, bouton), elle ne se rouvrira jamais.
+    # On marque TOUT DE SUITE l'invite comme présentée (session, local, Sheet),
+    # avant même d'ouvrir la modale. Ainsi, quelle que soit la façon dont
+    # l'utilisateur la referme (croix, Échap, clic en dehors, bouton), elle ne
+    # se rouvrira jamais — même après un redéploiement.
     st.session_state.email_prompt_done = True
     try:
         preferences.set_pref(current_user, "email_prompt_dismissed", True)
+    except Exception:
+        pass
+    try:
+        checker.set_email_prompt_vu(current_user)
     except Exception:
         pass
 
