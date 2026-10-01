@@ -121,7 +121,7 @@ st.markdown("""
         section[data-testid="stSidebar"][aria-expanded="true"] > div { width: 100vw !important; }
         .kpi-value { font-size: 1.4rem !important; }
         .form-section, .glass-card, .detail-card { padding: 1.1rem !important; border-radius: 12px !important; }
-        .stTabs [data-baseweb="tab"] { font-size: 0.8rem !important; padding: 0 0.5rem !important; }
+        [data-testid="stTabs"] [role="tab"] { font-size: 0.8rem !important; padding: 0 0.6rem !important; }
         .res-row { flex-wrap: wrap; gap: 0.5rem !important; }
         .res-time { min-width: auto !important; }
     }
@@ -384,42 +384,54 @@ st.markdown("""
     div[data-testid="stTabs"] {
         background: transparent;
     }
-    div[data-testid="stTabContent"] {
-        padding-top: 1.5rem;
+    div[data-testid="stTabContent"],
+    div[data-testid="stTabPanel"] {
+        padding-top: 1.25rem;
     }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
+    /* Onglets en « segmented control » : une piste arrondie, l'onglet actif est
+       une carte qui flotte dessus (couleurs exactes : thème clair/sombre).
+       Sélecteurs par rôle ARIA : valables pour les anciens onglets (baseweb) et
+       les nouveaux (react-aria, Streamlit ≥ 1.5x), dont le HTML a changé. */
+    [data-testid="stTabs"] [role="tablist"] {
+        display: flex;
+        width: fit-content;
+        max-width: 100%;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 10px;
         background: var(--surface-2);
-        border-radius: var(--radius-sm);
-        padding: 5px;
         flex-wrap: wrap;
     }
-    .stTabs [data-baseweb="tab"] {
-        height: 40px;
-        border-radius: 6px;
+    [data-testid="stTabs"] [role="tablist"]::before,
+    [data-testid="stTabs"] [role="tablist"]::after { display: none !important; }
+    [data-testid="stTabs"] [role="tab"] {
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 7px;
         background: transparent;
         border: none;
         color: #94a3b8;
         font-weight: 600;
         font-size: 0.92rem;
-        padding: 0 1.15rem;
+        padding: 0 1.1rem;
         white-space: nowrap;
-        transition: background 0.15s ease, color 0.15s ease;
+        transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
         margin: 0;
+        cursor: pointer;
     }
-    .stTabs [data-baseweb="tab"] p { margin: 0; font-size: inherit; font-weight: inherit; }
-    .stTabs [data-baseweb="tab"]:hover {
-        color: var(--accent);
-        background: transparent;
+    [data-testid="stTabs"] [role="tab"] p {
+        margin: 0; font-size: inherit; font-weight: inherit; color: inherit !important;
     }
-    /* Onglet actif : « segmented control » — carte flottante discrète plutôt
-       qu'un aplat bleu. Le fond exact (clair/sombre) est défini par le thème. */
-    .stTabs [aria-selected="true"] {
+    [data-testid="stTabs"] [role="tab"]:hover { color: var(--accent); }
+    [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
         color: var(--accent) !important;
         font-weight: 700 !important;
     }
-    .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"] { display: none; }
+    /* Soulignement natif de l'onglet actif : masqué (remplacé par la carte) */
+    [data-testid="stTabs"] .react-aria-SelectionIndicator,
+    [data-testid="stTabs"] [data-baseweb="tab-highlight"],
+    [data-testid="stTabs"] [data-baseweb="tab-border"] { display: none !important; }
 
     /* Buttons override */
     div[data-testid="stButton"] > button[kind="primary"] {
@@ -565,14 +577,39 @@ _THEME_DARK = f"""
         border-color: rgba(255,255,255,0.14) !important;
     }}
     {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(255,255,255,0.10) !important; }}
-    /* Onglet actif (sombre) : carte surélevée façon « segmented control ». */
-    {_SC} .stTabs [data-baseweb="tab-list"] {{ background: rgba(255,255,255,0.05) !important; }}
-    {_SC} .stTabs [aria-selected="true"] {{
-        background: #222c3f !important;
-        color: #ffffff !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.35) !important;
+    /* Textes d'exemple (placeholders) : lisibles sur fond sombre */
+    {_SC} input::placeholder, {_SC} textarea::placeholder {{
+        color: #6b7689 !important; -webkit-text-fill-color: #6b7689 !important; opacity: 1;
     }}
-    /* Champs date : fond sombre + texte clair (sinon date invisible en sombre) */
+    /* Onglets (sombre) : piste discrète, onglet actif = carte surélevée. */
+    {_SC} [data-testid="stTabs"] [role="tablist"] {{
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.06);
+    }}
+    {_SC} [data-testid="stTabs"] [role="tab"]:hover {{ color: #e6e9ef; }}
+    {_SC} [data-testid="stTabs"] [role="tab"][aria-selected="true"] {{
+        background: #263049 !important;
+        color: #ffffff !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06) !important;
+    }}
+    /* Champ date (Streamlit ≥ 1.5x) : fond sombre + chiffres clairs. Sans ça,
+       le fond reste gris clair et les chiffres héritent du blanc → invisibles. */
+    {_SC} [data-testid="stDateInputField"],
+    section[data-testid="stSidebar"] [data-testid="stDateInputField"] {{
+        background-color: #1b2130 !important;
+        border-color: rgba(255,255,255,0.16) !important;
+    }}
+    {_SC} [data-testid="stDateInputField"] [data-type]:not([data-focused]),
+    section[data-testid="stSidebar"] [data-testid="stDateInputField"] [data-type]:not([data-focused]) {{
+        color: #e6e9ef !important;
+        -webkit-text-fill-color: #e6e9ef !important;
+    }}
+    {_SC} [data-testid="stDateInputField"] [data-type="literal"],
+    section[data-testid="stSidebar"] [data-testid="stDateInputField"] [data-type="literal"] {{
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+    }}
+    /* Champs date (anciennes versions de Streamlit) : fond sombre + texte clair */
     {_SC} [data-testid="stDateInput"] div[data-baseweb="input"],
     {_SC} [data-testid="stDateInput"] input,
     section[data-testid="stSidebar"] [data-testid="stDateInput"] div[data-baseweb="input"],
@@ -636,8 +673,26 @@ _THEME_LIGHT = f"""
         border-color: rgba(0,0,0,0.12) !important;
     }}
     {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(0,0,0,0.10) !important; }}
-    /* Champs date : texte sombre forcé (sinon les chiffres restent blancs sur
-       fond clair et la date devient illisible dans les onglets). */
+    /* Champ date (Streamlit ≥ 1.5x) : fond clair + chiffres sombres. */
+    {_SC} [data-testid="stDateInputField"] {{
+        background-color: #f8fafc !important;
+        border-color: rgba(0,0,0,0.14) !important;
+    }}
+    section[data-testid="stSidebar"] [data-testid="stDateInputField"] {{
+        background-color: #ffffff !important;
+        border-color: rgba(0,0,0,0.14) !important;
+    }}
+    {_SC} [data-testid="stDateInputField"] [data-type]:not([data-focused]),
+    section[data-testid="stSidebar"] [data-testid="stDateInputField"] [data-type]:not([data-focused]) {{
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+    }}
+    {_SC} [data-testid="stDateInputField"] [data-type="literal"],
+    section[data-testid="stSidebar"] [data-testid="stDateInputField"] [data-type="literal"] {{
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+    }}
+    /* Champs date (anciennes versions de Streamlit) : texte sombre forcé. */
     {_SC} [data-testid="stDateInput"] div[data-baseweb="input"],
     {_SC} [data-testid="stDateInput"] input,
     section[data-testid="stSidebar"] [data-testid="stDateInput"] div[data-baseweb="input"],
@@ -651,9 +706,11 @@ _THEME_LIGHT = f"""
     section[data-testid="stSidebar"] [data-testid="stDateInput"] input {{
         background-color: #ffffff !important;
     }}
-    /* Onglet actif (clair) : carte blanche flottante façon « segmented control ». */
-    {_SC} .stTabs [data-baseweb="tab-list"] {{ background: #eef2f6 !important; }}
-    {_SC} .stTabs [aria-selected="true"] {{
+    /* Onglets (clair) : piste gris bleuté, onglet actif = carte blanche. */
+    {_SC} [data-testid="stTabs"] [role="tablist"] {{ background: #eef2f6 !important; }}
+    {_SC} [data-testid="stTabs"] [role="tab"] {{ color: #64748b; }}
+    {_SC} [data-testid="stTabs"] [role="tab"]:hover {{ color: #1e293b; }}
+    {_SC} [data-testid="stTabs"] [role="tab"][aria-selected="true"] {{
         background: #ffffff !important;
         color: var(--accent) !important;
         box-shadow: 0 1px 2px rgba(15,23,42,0.06), 0 2px 6px rgba(15,23,42,0.09) !important;
