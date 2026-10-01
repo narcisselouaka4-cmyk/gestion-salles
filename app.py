@@ -409,12 +409,14 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] p { margin: 0; font-size: inherit; font-weight: inherit; }
     .stTabs [data-baseweb="tab"]:hover {
-        color: inherit;
-        background: rgba(128,128,128,0.1);
+        color: var(--accent);
+        background: transparent;
     }
+    /* Onglet actif : « segmented control » — carte flottante discrète plutôt
+       qu'un aplat bleu. Le fond exact (clair/sombre) est défini par le thème. */
     .stTabs [aria-selected="true"] {
-        background: var(--accent) !important;
-        color: #ffffff !important;
+        color: var(--accent) !important;
+        font-weight: 700 !important;
     }
     .stTabs [data-baseweb="tab-highlight"],
     .stTabs [data-baseweb="tab-border"] { display: none; }
@@ -563,6 +565,13 @@ _THEME_DARK = f"""
         border-color: rgba(255,255,255,0.14) !important;
     }}
     {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(255,255,255,0.10) !important; }}
+    /* Onglet actif (sombre) : carte surélevée façon « segmented control ». */
+    {_SC} .stTabs [data-baseweb="tab-list"] {{ background: rgba(255,255,255,0.05) !important; }}
+    {_SC} .stTabs [aria-selected="true"] {{
+        background: #222c3f !important;
+        color: #ffffff !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.35) !important;
+    }}
     /* Champs date : fond sombre + texte clair (sinon date invisible en sombre) */
     {_SC} [data-testid="stDateInput"] div[data-baseweb="input"],
     {_SC} [data-testid="stDateInput"] input,
@@ -627,6 +636,28 @@ _THEME_LIGHT = f"""
         border-color: rgba(0,0,0,0.12) !important;
     }}
     {_SC} [data-testid="stVerticalBlockBorderWrapper"] {{ border-color: rgba(0,0,0,0.10) !important; }}
+    /* Champs date : texte sombre forcé (sinon les chiffres restent blancs sur
+       fond clair et la date devient illisible dans les onglets). */
+    {_SC} [data-testid="stDateInput"] div[data-baseweb="input"],
+    {_SC} [data-testid="stDateInput"] input,
+    section[data-testid="stSidebar"] [data-testid="stDateInput"] div[data-baseweb="input"],
+    section[data-testid="stSidebar"] [data-testid="stDateInput"] input {{
+        background-color: #f8fafc !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        border-color: rgba(0,0,0,0.14) !important;
+    }}
+    section[data-testid="stSidebar"] [data-testid="stDateInput"] div[data-baseweb="input"],
+    section[data-testid="stSidebar"] [data-testid="stDateInput"] input {{
+        background-color: #ffffff !important;
+    }}
+    /* Onglet actif (clair) : carte blanche flottante façon « segmented control ». */
+    {_SC} .stTabs [data-baseweb="tab-list"] {{ background: #eef2f6 !important; }}
+    {_SC} .stTabs [aria-selected="true"] {{
+        background: #ffffff !important;
+        color: var(--accent) !important;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.06), 0 2px 6px rgba(15,23,42,0.09) !important;
+    }}
 
     /* ── Sidebar (mode clair) ── */
     :root {{
@@ -987,11 +1018,6 @@ def render_sidebar(checker, authenticator):
         if st.button("⚙️ Réglages avancés", use_container_width=True, key="btn_settings"):
             open_settings_dialog(checker, authenticator)
 
-        st.markdown(
-            "<div style='margin-top: 1.5rem; text-align: center; font-size: 0.7rem; color: var(--sb-muted);'>CFPDC © 2024</div>",
-            unsafe_allow_html=True,
-        )
-
 
 # ═══════════════════════════════════════════════════════════
 # ONGLET 1 — DASHBOARD GESTION DE SALLE
@@ -1027,6 +1053,16 @@ def render_salle_section(checker, salle_name, d):
     pill_text = "OCCUPÉE" if occupee else "LIBRE"
     revenus_html = f" · {total_revenus:.0f} €" if total_revenus > 0 else ""
 
+    # Sous-titre (nombre d'occupations) uniquement quand la salle est occupée :
+    # quand elle est libre, on allège l'affichage (pas de « 0 occupation(s) »).
+    if occupee:
+        subtitle_html = (
+            f'<div style="font-size:0.82rem;color:#94a3b8;margin:0.2rem 0 0.9rem;">'
+            f'{len(occupations)} occupation(s){revenus_html}</div>'
+        )
+    else:
+        subtitle_html = '<div style="margin-bottom:0.9rem;"></div>'
+
     with st.container(border=True):
         st.markdown(f"""
         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
@@ -1034,7 +1070,7 @@ def render_salle_section(checker, salle_name, d):
             <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.05em;color:{pill_color};
                         background:{pill_bg};padding:0.25rem 0.7rem;border-radius:999px;white-space:nowrap;">{pill_text}</div>
         </div>
-        <div style="font-size:0.82rem;color:#94a3b8;margin:0.2rem 0 0.9rem;">{len(occupations)} occupation(s){revenus_html}</div>
+        {subtitle_html}
         """, unsafe_allow_html=True)
 
         if overlaps:
@@ -1053,12 +1089,8 @@ def render_salle_section(checker, salle_name, d):
             st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
             for occ in occupations:
                 st.markdown(render_detail_card(occ), unsafe_allow_html=True)
-        else:
-            st.markdown(
-                "<div style='padding:0.4rem 0;color:#94a3b8;font-size:0.9rem;'>"
-                "Aucune occupation prévue — salle entièrement libre.</div>",
-                unsafe_allow_html=True,
-            )
+        # Quand la salle est libre, la timeline affiche déjà
+        # « Aucune occupation sur ce créneau » : rien d'autre à ajouter.
 
 
 def onglet_gestion_salle(checker):
@@ -1718,7 +1750,11 @@ def render_email_prompt(checker):
     """
     Invite (via une modale) les utilisateurs sans email à en renseigner un,
     pour pouvoir récupérer leur mot de passe par code de vérification.
-    Affichée une fois par session (bouton « Plus tard » possible).
+
+    Affichée UNE SEULE FOIS par utilisateur : dès qu'elle apparaît, on mémorise
+    (en session ET en préférence persistante) qu'elle a été présentée. Elle ne
+    réapparaît donc plus — que l'utilisateur la referme avec la croix, recharge
+    l'appli, se reconnecte, lance une recherche ou change de thème.
     """
     if st.session_state.get("email_prompt_done"):
         return False
@@ -1729,11 +1765,20 @@ def render_email_prompt(checker):
         email = preferences.get_user_email(current_user, checker)
     except Exception:
         email = ""
-    # A un email OU a déjà refusé (persistant) → ne plus demander
+    # A un email OU a déjà été invité (persistant) → ne plus demander
     dismissed = bool(preferences.get_pref(current_user, "email_prompt_dismissed", False))
     if email or dismissed:
         st.session_state.email_prompt_done = True
         return False
+
+    # On marque TOUT DE SUITE l'invite comme présentée, avant même d'ouvrir la
+    # modale. Ainsi, quelle que soit la façon dont l'utilisateur la referme
+    # (croix, Échap, clic en dehors, bouton), elle ne se rouvrira jamais.
+    st.session_state.email_prompt_done = True
+    try:
+        preferences.set_pref(current_user, "email_prompt_dismissed", True)
+    except Exception:
+        pass
 
     @st.dialog("📧 Ajoutez votre adresse email")
     def _d():
